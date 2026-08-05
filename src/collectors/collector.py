@@ -1,35 +1,63 @@
 from pathlib import Path
+from datetime import datetime
 
 import boto3
 import yfinance as yf
 
 print("Trading Analytics Bot Started")
 
+watchlist = (
+    Path(__file__).resolve().parents[2]
+    / "watchlist.txt"
+)
+
+with open(watchlist, "r") as file:
+    stocks = [
+        line.strip()
+        for line in file
+        if line.strip()
+    ]
+
+print("=" * 50)
+print(f"Loaded {len(stocks)} stocks from watchlist.")
+print("=" * 50)
+
+s3 = boto3.client("s3")
+
 try:
-    stock = yf.Ticker("AAPL")
 
-    history = stock.history(period="5d")
+    for symbol in stocks:
 
-    output_file = (
-        Path(__file__).resolve().parents[2]
-        / "data"
-        / "local"
-        / "AAPL_5d.csv"
-    )
+        print(f"\nCollecting {symbol}...")
 
-    history.to_csv(output_file)
+        stock = yf.Ticker(symbol)
 
-    s3 = boto3.client("s3")
+        history = stock.history(period="5d")
 
-    s3.upload_file(
-        str(output_file),
-        "trading-analytics-data",
-        "raw/AAPL_5d.csv",
-    )
+        today = datetime.today().strftime("%Y-%m-%d")
 
-    print(history)
-    print(f"\nData saved to {output_file}")
-    print("File uploaded to Amazon S3")
+        output_folder = (
+            Path(__file__).resolve().parents[2]
+            / "data"
+            / "local"
+            / symbol
+        )
+
+        output_folder.mkdir(parents=True, exist_ok=True)
+
+        output_file = output_folder / f"{today}.csv"
+
+        history.to_csv(output_file)
+
+        s3.upload_file(
+            str(output_file),
+            "trading-analytics-data",
+            f"raw/{symbol}/{today}.csv",
+        )
+
+        print(history)
+        print(f"Saved {symbol} to {output_file}")
+        print(f"Uploaded {symbol} to Amazon S3")
 
 except Exception as error:
     print(f"\nError collecting market data: {error}")

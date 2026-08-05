@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local market data
+data/local/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
