@@ -5,3 +5,4 @@ pyarrow
 duckdb
 yfinance
 python-dotenv
+matplotlib

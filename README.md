@@ -43,7 +43,13 @@ BUY / HOLD / SELL Recommendation
 - AWS IAM
 - AWS Glue Data Catalog
 - Amazon Athena
+- Amazon SNS
+- AWS Lambda
+- Amazon EventBridge Scheduler
+- Amazon CloudWatch
 - AWS CLI
+
+*Amazon QuickSight will be integrated after the AWS account setup issue is resolved.*
 
 ---
 
@@ -60,12 +66,14 @@ BUY / HOLD / SELL Recommendation
 
 # Current Features
 
-- Collects historical market data
+- Collects one year of historical market data
 - Supports a 100-stock watchlist
 - Saves market data locally as CSV files
-- Automatically uploads data to Amazon S3
+- Automatically uploads CSV files to Amazon S3
+- Generates technical analysis charts
+- Automatically uploads chart images to Amazon S3
 - Catalogs cloud data with AWS Glue
-- Queries data using Amazon Athena
+- Queries cloud data using Amazon Athena
 - Calculates Relative Strength Index (RSI)
 - Detects Support and Resistance zones
 - Evaluates a Hybrid Trading Strategy
@@ -203,24 +211,30 @@ The primary area for improvement is the Support and Resistance engine. The next 
 
 # Roadmap
 
-## Day 4
+### Day 4
 
-- Increase historical data window to one year
-- Improve Support and Resistance detection
-- Improve zone selection
-- Generate detailed diagnostic reports
-- Generate chart snapshots
+- Increase historical data window to one year ✅
+- Improve Support and Resistance detection ✅
+- Improve nearest zone selection ✅
+- Generate technical analysis charts ✅
+- Upload chart images to Amazon S3 ✅
+- Configure Amazon SNS ✅
+- Create AWS Lambda function ✅
+- Create EventBridge Scheduler ✅
+- Configure Lambda environment variables ✅
+- Prepare cloud automation infrastructure ✅
 
 ## Future
 
-- AWS Lambda automation
-- Amazon EventBridge scheduling
-- Amazon CloudWatch monitoring
+- Deploy the complete trading bot to AWS Lambda
+- Connect Scheduler to the production trading bot
+- Resolve Amazon QuickSight account setup
+- Build the QuickSight analytics dashboard
 - Backtesting engine
 - Paper trading
-- Performance dashboard
+- Performance dashboard enhancements
 - Trading reports
-- Risk management enhancements
+- Risk management improvements
 
 ---
 

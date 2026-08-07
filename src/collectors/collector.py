@@ -38,7 +38,7 @@ for symbol in stocks:
         print(f"\nCollecting {symbol}...")
 
         stock = yf.Ticker(symbol)
-        history = stock.history(period="6mo", interval="1d")
+        history = stock.history(period="1y", interval="1d")
 
         if history.empty:
             print(f"No market data returned for {symbol}.")
@@ -65,8 +65,28 @@ for symbol in stocks:
 
         analysis = evaluate_stock(history)
 
+        print(type(analysis))
+        print(analysis)
+
+        from visualization.chart_generator import generate_chart
+
+        chart_path = generate_chart(
+            symbol=symbol,
+            data=history,
+            support=analysis["support"],
+            resistance=analysis["resistance"]
+        )
+
+        s3.upload_file(
+            chart_path,
+            "trading-analytics-data",
+            f"charts/{symbol}.png",
+        )
+
         print(f"Saved {symbol} to {output_file}")
-        print(f"Uploaded {symbol} to Amazon S3")
+        print(f"Uploaded {symbol} CSV to Amazon S3")
+        print(f"Uploaded {symbol} Chart to Amazon S3")
+        print(f"Chart saved: {chart_path}")
         print(f"Recommendation: {analysis['recommendation']}")
         print(f"RSI: {analysis['rsi']}")
 

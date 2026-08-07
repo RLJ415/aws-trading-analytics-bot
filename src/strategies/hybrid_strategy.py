@@ -55,63 +55,8 @@ def evaluate_stock(df):
 
     zones = find_support_resistance(df)
 
-    support_zones = zones["support"]
-    resistance_zones = zones["resistance"]
-
-    nearest_support = None
-    nearest_resistance = None
-
-    if support_zones:
-        support_at_or_below_price = [
-            zone
-            for zone in support_zones
-            if zone["zone_low"] <= current_price
-        ]
-
-        if support_at_or_below_price:
-            nearest_support = min(
-                support_at_or_below_price,
-                key=lambda zone: abs(
-                    current_price - zone["zone_high"]
-                ),
-            )
-        else:
-            nearest_support = min(
-                support_zones,
-                key=lambda zone: abs(
-                    current_price
-                    - (
-                        zone["zone_low"]
-                        + zone["zone_high"]
-                    ) / 2
-                ),
-            )
-
-    if resistance_zones:
-        resistance_at_or_above_price = [
-            zone
-            for zone in resistance_zones
-            if zone["zone_high"] >= current_price
-        ]
-
-        if resistance_at_or_above_price:
-            nearest_resistance = min(
-                resistance_at_or_above_price,
-                key=lambda zone: abs(
-                    zone["zone_low"] - current_price
-                ),
-            )
-        else:
-            nearest_resistance = min(
-                resistance_zones,
-                key=lambda zone: abs(
-                    current_price
-                    - (
-                        zone["zone_low"]
-                        + zone["zone_high"]
-                    ) / 2
-                ),
-            )
+    nearest_support = zones["support"]
+    nearest_resistance = zones["resistance"]
 
     recommendation = "HOLD"
     confidence = 0

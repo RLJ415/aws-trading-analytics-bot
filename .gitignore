@@ -5,6 +5,15 @@ __pycache__/
 # Local market data
 data/local/
 
+# Generated charts
+data/charts/
+
+# Environment variables
+.env
+
+# Lambda packages
+*.zip
+
 # VS Code
 .vscode/
 
