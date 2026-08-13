@@ -14,6 +14,9 @@ def generate_chart(
     Generates a price chart and saves it as a PNG.
     """
 
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        output_folder = "/tmp/charts"
+
     os.makedirs(output_folder, exist_ok=True)
 
     plt.figure(figsize=(14, 7))

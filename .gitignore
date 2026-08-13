@@ -19,3 +19,12 @@ data/charts/
 
 # macOS
 .DS_Store
+# Local verification artifacts
+api-results.json
+chart-read-policy.json
+lambda-test-response.json
+latest-lambda.log
+latest-results.json
+smoke-api.json
+smoke-chart-url.txt
+smoke-page.html
