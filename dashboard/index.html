@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>AWS Trading Analytics Bot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+    <h1>AWS Trading Analytics Bot</h1>
+
+    <p>
+        Daily market analysis powered by AWS.
+    </p>
+</header>
+
+<main>
+
+    <section>
+        <h2>Market Dashboard</h2>
+
+        <p>
+            The bot analyzes 100 stocks using RSI, support,
+            resistance, and confidence scoring.
+        </p>
+
+        <p id="dashboard-status">
+            Loading live market results...
+        </p>
+    </section>
+
+    <section>
+        <h2>Stock Analysis</h2>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Recommendation</th>
+                    <th>RSI</th>
+                    <th>Confidence</th>
+                    <th>Chart</th>
+                </tr>
+            </thead>
+
+            <tbody id="stock-results">
+
+                <tr>
+                    <td>Loading...</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+
+            </tbody>
+
+        </table>
+    </section>
+
+</main>
+
+<script>
+
+const API_URL =
+    "https://429683gmgj.execute-api.us-east-1.amazonaws.com/prod/results";
+
+
+async function loadStockResults() {
+
+    const tableBody =
+        document.getElementById("stock-results");
+
+    const dashboardStatus =
+        document.getElementById("dashboard-status");
+
+    try {
+
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+            throw new Error(
+                `API request failed: ${response.status}`
+            );
+        }
+
+        const results = await response.json();
+
+        tableBody.innerHTML = "";
+
+        results.forEach(stock => {
+
+            const row =
+                document.createElement("tr");
+
+           row.innerHTML = `
+    <td>${stock.symbol}</td>
+    <td>${stock.recommendation}</td>
+    <td>${stock.rsi}</td>
+    <td>${stock.confidence}</td>
+    <td>
+        <a
+            href="${stock.chart_url}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            <img
+                src="${stock.chart_url}"
+                alt="${stock.symbol} support and resistance chart"
+                width="140"
+            >
+        </a>
+    </td>
+`;
+
+            tableBody.appendChild(row);
+        });
+
+        dashboardStatus.textContent =
+            `${results.length} stocks processed in latest run.`;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Dashboard error:",
+            error
+        );
+
+        dashboardStatus.textContent =
+            "Unable to load live market results.";
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5">
+                    Dashboard data could not be loaded.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+loadStockResults();
+
+</script>
+
+</body>
+</html>
