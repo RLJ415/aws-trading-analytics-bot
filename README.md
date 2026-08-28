@@ -115,6 +115,15 @@ Trading Bot
          Completion notifications
 ```
 
+Production monitoring and scheduling now include:
+
+* Four weekday EventBridge Scheduler runs at 9:25 AM, 11:25 AM, 1:25 PM, and 3:25 PM ET
+* `America/New_York` schedule timezone
+* Two Scheduler retry attempts with a 30-minute maximum event age
+* `PJ3-Scheduler-Target-Error` CloudWatch alarm for Scheduler target failures
+* SNS alert delivery through the `trading-alerts` topic
+* 30-day CloudWatch log retention for both production Lambda functions
+
 ---
 
 # AWS Services Used
@@ -123,10 +132,10 @@ Trading Bot
 * **AWS IAM** — controls least-privilege access between AWS resources
 * **AWS Lambda** — runs the trading bot and dashboard API
 * **Amazon ECR** — stores the Docker container image used by the production trading Lambda
-* **Amazon EventBridge Scheduler** — automatically invokes the trading bot
+* **Amazon EventBridge Scheduler** — invokes the trading bot four times each weekday during market hours
 * **Amazon API Gateway** — exposes the dashboard REST API
 * **Amazon SNS** — sends bot completion notifications
-* **Amazon CloudWatch** — stores Lambda logs and supports troubleshooting
+* **Amazon CloudWatch** — stores Lambda logs, enforces log retention, supports troubleshooting, and alarms on Scheduler target failures
 * **AWS Glue Data Catalog** — catalogs market data stored in Amazon S3
 * **Amazon Athena** — performs serverless SQL queries against S3 data
 * **AWS Amplify Hosting** — hosts the live web dashboard
@@ -194,9 +203,11 @@ Each stock analysis also includes reasoning describing why a trade setup was or 
 * Produces dashboard-ready JSON results
 * Runs the complete bot inside an AWS Lambda container
 * Stores the production container image in Amazon ECR
-* Automatically runs through EventBridge Scheduler
+* Automatically runs four times each weekday through EventBridge Scheduler
 * Sends completion notifications through Amazon SNS
-* Logs production executions in Amazon CloudWatch
+* Retries temporary Scheduler delivery failures
+* Alerts on Scheduler target invocation errors through CloudWatch and SNS
+* Logs production executions in Amazon CloudWatch with 30-day retention
 * Catalogs S3 market data with AWS Glue
 * Queries cloud data through Amazon Athena
 * Serves current results through Amazon API Gateway
@@ -254,6 +265,14 @@ trading-bot-runner-container
 
 Runs the full stock analytics pipeline using a Docker container stored in Amazon ECR.
 
+Current production configuration:
+
+```text
+Memory: 512 MB
+Ephemeral storage: 512 MB
+Timeout: 10 minutes
+```
+
 ## Dashboard Lambda
 
 ```text
@@ -286,7 +305,6 @@ Main object structure:
 raw/
 charts/
 dashboard/
-processed/
 ```
 
 Current dashboard data:
@@ -309,7 +327,59 @@ Used for trading bot completion notifications.
 daily-trading-bot
 ```
 
-Invokes the production trading Lambda automatically.
+Production schedule:
+
+```text
+cron(25 9,11,13,15 ? * MON-FRI *)
+Timezone: America/New_York
+State: ENABLED
+```
+
+The trading bot runs at:
+
+* 9:25 AM ET
+* 11:25 AM ET
+* 1:25 PM ET
+* 3:25 PM ET
+
+Scheduler reliability settings:
+
+```text
+Maximum retry attempts: 2
+Maximum event age: 30 minutes
+```
+
+The Scheduler execution role has explicit `lambda:InvokeFunction` permission for `trading-bot-runner-container`.
+
+## CloudWatch Reliability Alarm
+
+```text
+PJ3-Scheduler-Target-Error
+```
+
+Alarm configuration:
+
+```text
+Namespace: AWS/Scheduler
+Metric: TargetErrorCount
+ScheduleGroup: default
+Statistic: Sum
+Period: 5 minutes
+Threshold: >= 1
+SNS topic: trading-alerts
+```
+
+Missing data is treated as not breaching so the alarm remains `OK` when no Scheduler target errors are occurring.
+
+A post-launch Scheduler failure was traced to missing `lambda:InvokeFunction` permission for `trading-bot-runner-container`. After correcting the IAM permission, a one-time Scheduler test verified:
+
+```text
+EventBridge Scheduler
+→ trading-bot-runner-container
+→ S3 dashboard update
+→ SNS publish
+→ email delivery
+```
 
 ---
 
@@ -443,17 +513,24 @@ This is considered a post-launch resiliency improvement and does not prevent the
 
 # Post-Launch Backlog
 
+## Reliability and Monitoring
+
+* Create a CloudWatch `Errors` alarm for `trading-bot-runner-container`
+* Continue monitoring Lambda runtime as the watchlist and asset classes expand
+* Add stronger failure reporting inside the Lambda execution path
+
 ## Market Data Reliability
 
 * Retry failed Yahoo Finance requests
 * Track failed tickers separately
 * Display processed count such as `99/100`
 * Replace repeatedly unavailable tickers if necessary
+* Resolve or replace the recurring MMC data issue
 
 ## Scheduler Improvements
 
-* Replace the current daily interval with a specific market-related schedule
-* Limit automated runs to appropriate trading days
+* Add market-holiday awareness so weekday schedules do not run when the market is closed
+* Revisit scan times later if strategy performance supports a different intraday cadence
 
 ## Notifications
 
@@ -461,6 +538,14 @@ This is considered a post-launch resiliency improvement and does not prevent the
 * Include failed tickers
 * Include BUY / SELL counts
 * Include highest-confidence opportunities
+* Highlight what changed since the previous scan
+
+## Multi-Asset Expansion
+
+* Add ETF collection and analysis
+* Add currency / forex collection and analysis
+* Add dashboard asset-class filters
+* Add options support later with strikes, expirations, calls/puts, volume, open interest, implied volatility, and Greeks
 
 ## Strategy Improvements
 
@@ -470,12 +555,11 @@ This is considered a post-launch resiliency improvement and does not prevent the
 * Add paper trading
 * Improve risk-management logic
 
-## Infrastructure Cleanup
+## Performance
 
-* Review unused AWS resources
-* Review the unused `processed/` prefix
-* Remove obsolete testing resources
-* Optimize Lambda runtime and memory usage
+* Optimize Lambda runtime before expanding the asset universe
+* Reevaluate memory and ephemeral storage after ETF and forex expansion
+* Track runtime and failure rate across the four daily scans
 
 ## Analytics
 
@@ -489,6 +573,24 @@ This is considered a post-launch resiliency improvement and does not prevent the
 * Improve filtering and sorting
 * Improve chart interaction
 * Improve mobile presentation
+* Show processed / failed counts directly in the dashboard
+
+---
+
+# Completed Post-Launch Reliability Work
+
+* Fixed EventBridge Scheduler IAM permission for `trading-bot-runner-container`
+* Verified the automated Scheduler → Lambda → S3 → SNS → email delivery path
+* Changed the bot from once-daily execution to four weekday market-hour scans
+* Set Scheduler retry policy to two retries with a 30-minute maximum event age
+* Increased the trading Lambda timeout from 5 minutes to 10 minutes
+* Kept trading Lambda memory and ephemeral storage at 512 MB
+* Added the `PJ3-Scheduler-Target-Error` CloudWatch alarm
+* Set 30-day CloudWatch log retention for both production Lambda functions
+* Removed the obsolete `trading-bot-runner` ZIP Lambda
+* Removed the abandoned `rj-pj3-trading-dashboard` S3 bucket
+* Removed stale IAM roles and policies tied to deleted Lambda resources
+* Removed the unused empty `processed/` S3 prefix
 
 ---
 
@@ -537,6 +639,9 @@ The production system successfully:
 * Generates charts
 * Publishes dashboard data
 * Sends completion notifications
+* Runs four scheduled weekday scans during market hours
+* Retries temporary Scheduler delivery failures
+* Alerts on Scheduler target invocation errors
 * Serves results through a REST API
 * Protects private S3 objects
 * Displays live results through a hosted web application
