@@ -10,65 +10,370 @@
     >
 
     <title>AWS Trading Analytics Bot</title>
-    <link rel="stylesheet" href="style.css">
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
 
 <body>
 
-<header>
-    <h1>AWS Trading Analytics Bot</h1>
+<header class="hero-header">
 
-    <p>
-        Daily market analysis powered by AWS.
-    </p>
+    <div class="hero-copy">
+
+        <p class="hero-kicker">
+            Live AWS Trading Dashboard
+        </p>
+
+        <h1>
+            AWS Trading Analytics Bot
+        </h1>
+
+        <p class="hero-subtitle">
+            Intraday market analysis powered by AWS, with
+            RSI, support, resistance, and confidence scoring.
+        </p>
+
+    </div>
+
+    <div
+        class="hero-visual"
+        aria-hidden="true"
+    >
+
+        <div class="hero-grid"></div>
+
+        <svg
+            class="hero-chart"
+            viewBox="0 0 640 250"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+
+            <polyline
+                class="hero-chart-shadow"
+                points="20,220 100,170 150,185 215,135 270,145 340,88 405,108 475,68 535,92 595,35"
+            ></polyline>
+
+            <polyline
+                class="hero-chart-line"
+                points="20,220 100,170 150,185 215,135 270,145 340,88 405,108 475,68 535,92 595,35"
+            ></polyline>
+
+            <circle
+                class="hero-chart-point"
+                cx="595"
+                cy="35"
+                r="8"
+            ></circle>
+
+        </svg>
+
+        <div class="gold-pot">
+
+            <div class="coin coin-1"></div>
+            <div class="coin coin-2"></div>
+            <div class="coin coin-3"></div>
+            <div class="coin coin-4"></div>
+
+            <div class="pot-body"></div>
+            <div class="pot-rim"></div>
+            <div class="pot-handle"></div>
+
+        </div>
+
+    </div>
+
 </header>
+
 
 <main>
 
-    <section>
-        <h2>Market Dashboard</h2>
+    <section class="dashboard-panel">
+
+        <h2>
+            Market Dashboard
+        </h2>
 
         <p>
-            The bot analyzes 100 stocks using RSI, support,
-            resistance, and confidence scoring.
+            The bot analyzes up to 100 stocks using RSI,
+            support, resistance, and confidence scoring.
         </p>
 
         <p id="dashboard-status">
             Loading live market results...
         </p>
+
     </section>
 
-    <section>
-        <h2>Stock Analysis</h2>
 
-        <table>
+    <section
+        class="dashboard-panel"
+        id="stock-analysis-section"
+    >
 
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Recommendation</th>
-                    <th>RSI</th>
-                    <th>Confidence</th>
-                    <th>Chart</th>
-                </tr>
-            </thead>
+        <h2>
+            Stock Analysis
+        </h2>
 
-            <tbody id="stock-results">
+        <div class="table-wrap">
 
-                <tr>
-                    <td>Loading...</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                </tr>
+            <table>
 
-            </tbody>
+                <thead>
 
-        </table>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Recommendation</th>
+                        <th>RSI</th>
+                        <th>Confidence</th>
+                        <th>Chart</th>
+                    </tr>
+
+                </thead>
+
+                <tbody id="stock-results">
+
+                    <tr>
+                        <td>Loading...</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div
+            id="pagination"
+            class="pagination"
+        ></div>
+
     </section>
 
 </main>
+
+
+<div
+    id="chart-modal"
+    class="chart-modal"
+    hidden
+>
+
+    <div
+        class="chart-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chart-modal-title"
+    >
+
+        <div class="chart-modal-header">
+
+            <div>
+
+                <p class="chart-modal-kicker">
+                    Interactive Daily Price History
+                </p>
+
+                <h2 id="chart-modal-title">
+                    Stock Chart
+                </h2>
+
+            </div>
+
+            <button
+                id="chart-modal-close"
+                class="chart-modal-close"
+                type="button"
+                aria-label="Close interactive chart"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            id="chart-modal-status"
+            class="chart-modal-status"
+        >
+            Loading price history...
+        </div>
+
+
+        <div class="ohlc-readout">
+
+            <div>
+                <span>Date</span>
+
+                <strong id="ohlc-date">
+                    -
+                </strong>
+            </div>
+
+            <div>
+                <span>Open</span>
+
+                <strong id="ohlc-open">
+                    -
+                </strong>
+            </div>
+
+            <div>
+                <span>High</span>
+
+                <strong id="ohlc-high">
+                    -
+                </strong>
+            </div>
+
+            <div>
+                <span>Low</span>
+
+                <strong id="ohlc-low">
+                    -
+                </strong>
+            </div>
+
+            <div>
+                <span>Close</span>
+
+                <strong id="ohlc-close">
+                    -
+                </strong>
+            </div>
+
+            <div>
+                <span>Volume</span>
+
+                <strong id="ohlc-volume">
+                    -
+                </strong>
+            </div>
+
+        </div>
+
+
+        <div class="chart-toolbar">
+
+            <span>
+                View:
+            </span>
+
+            <button
+                type="button"
+                data-range="22"
+            >
+                1M
+            </button>
+
+            <button
+                type="button"
+                data-range="66"
+                class="active"
+            >
+                3M
+            </button>
+
+            <button
+                type="button"
+                data-range="132"
+            >
+                6M
+            </button>
+
+            <button
+                type="button"
+                data-range="252"
+            >
+                1Y
+            </button>
+
+            <button
+                type="button"
+                data-range="all"
+            >
+                All
+            </button>
+
+        </div>
+
+
+        <div class="interactive-chart-shell">
+
+            <div
+                id="interactive-chart"
+                class="interactive-chart"
+            ></div>
+
+            <div
+                id="chart-loading"
+                class="chart-loading"
+            >
+                Loading interactive chart...
+            </div>
+
+        </div>
+
+
+        <div class="chart-controls-help">
+
+            <span>
+                <strong>Move cursor:</strong>
+                inspect each trading day
+            </span>
+
+            <span>
+                <strong>Drag:</strong>
+                move backward or forward
+            </span>
+
+            <span>
+                <strong>Mouse wheel:</strong>
+                zoom
+            </span>
+
+            <span>
+                <strong>Price scale:</strong>
+                drag the right side
+            </span>
+
+        </div>
+
+
+        <div class="tradingview-credit">
+
+            TradingView Lightweight Charts™
+            <span>•</span>
+
+            <a
+                href="https://www.tradingview.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                TradingView
+            </a>
+
+            <span>•</span>
+
+            Copyright © 2025 TradingView, Inc.
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script
+    src="https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"
+></script>
+
 
 <script>
 
@@ -76,58 +381,604 @@ const API_URL =
     "https://429683gmgj.execute-api.us-east-1.amazonaws.com/prod/results";
 
 
+const STOCKS_PER_PAGE =
+    20;
+
+
+let stockResults =
+    [];
+
+
+let currentPage =
+    1;
+
+
+let activeChartButton =
+    null;
+
+
+let interactiveChart =
+    null;
+
+
+let candleSeries =
+    null;
+
+
+let volumeSeries =
+    null;
+
+
+let currentChartHistory =
+    [];
+
+
+/* =========================================
+   BASIC FORMATTING
+   ========================================= */
+
+
+function formatMoney(value) {
+
+    const number =
+        Number(value);
+
+
+    if (!Number.isFinite(number)) {
+
+        return "-";
+
+    }
+
+
+    return `$${number.toFixed(2)}`;
+
+}
+
+
+function formatVolume(value) {
+
+    const number =
+        Number(value);
+
+
+    if (!Number.isFinite(number)) {
+
+        return "-";
+
+    }
+
+
+    return Math
+        .round(number)
+        .toLocaleString("en-US");
+
+}
+
+
+function formatDate(dateValue) {
+
+    if (!dateValue) {
+
+        return "-";
+
+    }
+
+
+    if (
+        typeof dateValue === "object" &&
+        dateValue.year &&
+        dateValue.month &&
+        dateValue.day
+    ) {
+
+        return new Date(
+            Date.UTC(
+                dateValue.year,
+                dateValue.month - 1,
+                dateValue.day
+            )
+        ).toLocaleDateString(
+            "en-US",
+            {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                timeZone: "UTC"
+            }
+        );
+
+    }
+
+
+    const dateString =
+        String(dateValue);
+
+
+    const parts =
+        dateString.split("-");
+
+
+    if (parts.length !== 3) {
+
+        return dateString;
+
+    }
+
+
+    return new Date(
+        Date.UTC(
+            Number(parts[0]),
+            Number(parts[1]) - 1,
+            Number(parts[2])
+        )
+    ).toLocaleDateString(
+        "en-US",
+        {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "UTC"
+        }
+    );
+
+}
+
+
+function updateOhlcReadout(
+    candle,
+    volume = null
+) {
+
+    document.getElementById(
+        "ohlc-date"
+    ).textContent =
+        candle
+            ? formatDate(candle.time)
+            : "-";
+
+
+    document.getElementById(
+        "ohlc-open"
+    ).textContent =
+        candle
+            ? formatMoney(candle.open)
+            : "-";
+
+
+    document.getElementById(
+        "ohlc-high"
+    ).textContent =
+        candle
+            ? formatMoney(candle.high)
+            : "-";
+
+
+    document.getElementById(
+        "ohlc-low"
+    ).textContent =
+        candle
+            ? formatMoney(candle.low)
+            : "-";
+
+
+    document.getElementById(
+        "ohlc-close"
+    ).textContent =
+        candle
+            ? formatMoney(candle.close)
+            : "-";
+
+
+    document.getElementById(
+        "ohlc-volume"
+    ).textContent =
+        volume !== null
+            ? formatVolume(volume)
+            : "-";
+
+}
+
+
+/* =========================================
+   PAGINATION
+   ========================================= */
+
+
+function createPaginationButton(
+    label,
+    page,
+    disabled = false,
+    active = false
+) {
+
+    const button =
+        document.createElement(
+            "button"
+        );
+
+
+    button.type =
+        "button";
+
+
+    button.textContent =
+        label;
+
+
+    button.disabled =
+        disabled;
+
+
+    if (active) {
+
+        button.classList.add(
+            "active"
+        );
+
+    }
+
+
+    button.addEventListener(
+        "click",
+        () => {
+
+            currentPage =
+                page;
+
+
+            renderCurrentPage();
+
+
+            document
+                .getElementById(
+                    "stock-analysis-section"
+                )
+                .scrollIntoView(
+                    {
+                        behavior: "smooth",
+                        block: "start"
+                    }
+                );
+
+        }
+    );
+
+
+    return button;
+
+}
+
+
+function renderPagination() {
+
+    const pagination =
+        document.getElementById(
+            "pagination"
+        );
+
+
+    pagination.innerHTML =
+        "";
+
+
+    if (
+        stockResults.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    const totalPages =
+        Math.ceil(
+            stockResults.length /
+            STOCKS_PER_PAGE
+        );
+
+
+    if (
+        totalPages <= 1
+    ) {
+
+        return;
+
+    }
+
+
+    pagination.appendChild(
+        createPaginationButton(
+            "First",
+            1,
+            currentPage === 1
+        )
+    );
+
+
+    pagination.appendChild(
+        createPaginationButton(
+            "Previous",
+            currentPage - 1,
+            currentPage === 1
+        )
+    );
+
+
+    for (
+        let page = 1;
+        page <= totalPages;
+        page++
+    ) {
+
+        pagination.appendChild(
+            createPaginationButton(
+                String(page),
+                page,
+                false,
+                page === currentPage
+            )
+        );
+
+    }
+
+
+    pagination.appendChild(
+        createPaginationButton(
+            "Next",
+            currentPage + 1,
+            currentPage === totalPages
+        )
+    );
+
+
+    pagination.appendChild(
+        createPaginationButton(
+            "Last",
+            totalPages,
+            currentPage === totalPages
+        )
+    );
+
+}
+
+
+/* =========================================
+   STOCK TABLE
+   ========================================= */
+
+
+function renderCurrentPage() {
+
+    const tableBody =
+        document.getElementById(
+            "stock-results"
+        );
+
+
+    const dashboardStatus =
+        document.getElementById(
+            "dashboard-status"
+        );
+
+
+    if (
+        stockResults.length === 0
+    ) {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5">
+                    No stock results are available.
+                </td>
+            </tr>
+        `;
+
+
+        dashboardStatus.textContent =
+            "0 stocks processed in latest run.";
+
+
+        document.getElementById(
+            "pagination"
+        ).innerHTML =
+            "";
+
+
+        return;
+
+    }
+
+
+    const totalPages =
+        Math.ceil(
+            stockResults.length /
+            STOCKS_PER_PAGE
+        );
+
+
+    if (
+        currentPage > totalPages
+    ) {
+
+        currentPage =
+            totalPages;
+
+    }
+
+
+    const startIndex =
+        (
+            currentPage - 1
+        ) *
+        STOCKS_PER_PAGE;
+
+
+    const endIndex =
+        Math.min(
+            startIndex +
+            STOCKS_PER_PAGE,
+            stockResults.length
+        );
+
+
+    const pageResults =
+        stockResults.slice(
+            startIndex,
+            endIndex
+        );
+
+
+    tableBody.innerHTML =
+        "";
+
+
+    pageResults.forEach(
+        stock => {
+
+            const row =
+                document.createElement(
+                    "tr"
+                );
+
+
+            const chartPreview =
+                stock.chart_url
+                    ? `
+                        <img
+                            src="${stock.chart_url}"
+                            alt="${stock.symbol} support and resistance chart"
+                            width="140"
+                        >
+                    `
+                    : `
+                        <div class="chart-preview-missing">
+                            No preview
+                        </div>
+                    `;
+
+
+            row.innerHTML = `
+                <td>
+                    ${stock.symbol}
+                </td>
+
+                <td>
+                    ${stock.recommendation}
+                </td>
+
+                <td>
+                    ${stock.rsi}
+                </td>
+
+                <td>
+                    ${stock.confidence}
+                </td>
+
+                <td>
+
+                    <button
+                        type="button"
+                        class="chart-open-button"
+                        aria-label="Open interactive ${stock.symbol} chart"
+                    >
+
+                        ${chartPreview}
+
+                        <span>
+                            Open interactive chart
+                        </span>
+
+                    </button>
+
+                </td>
+            `;
+
+
+            const chartButton =
+                row.querySelector(
+                    ".chart-open-button"
+                );
+
+
+            chartButton.addEventListener(
+                "click",
+                () => {
+
+                    openInteractiveChart(
+                        stock.symbol,
+                        chartButton
+                    );
+
+                }
+            );
+
+
+            tableBody.appendChild(
+                row
+            );
+
+        }
+    );
+
+
+    dashboardStatus.textContent =
+        `${stockResults.length} stocks processed in latest run. ` +
+        `Showing ${startIndex + 1}-${endIndex}.`;
+
+
+    renderPagination();
+
+}
+
+
+/* =========================================
+   LOAD DASHBOARD RESULTS
+   ========================================= */
+
+
 async function loadStockResults() {
 
     const tableBody =
-        document.getElementById("stock-results");
+        document.getElementById(
+            "stock-results"
+        );
+
 
     const dashboardStatus =
-        document.getElementById("dashboard-status");
+        document.getElementById(
+            "dashboard-status"
+        );
+
 
     try {
 
-        const response = await fetch(API_URL);
+        const response =
+            await fetch(
+                API_URL
+            );
 
-        if (!response.ok) {
+
+        if (
+            !response.ok
+        ) {
+
             throw new Error(
                 `API request failed: ${response.status}`
             );
+
         }
 
-        const results = await response.json();
 
-        tableBody.innerHTML = "";
+        stockResults =
+            await response.json();
 
-        results.forEach(stock => {
 
-            const row =
-                document.createElement("tr");
+        currentPage =
+            1;
 
-           row.innerHTML = `
-    <td>${stock.symbol}</td>
-    <td>${stock.recommendation}</td>
-    <td>${stock.rsi}</td>
-    <td>${stock.confidence}</td>
-    <td>
-        <a
-            href="${stock.chart_url}"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            <img
-                src="${stock.chart_url}"
-                alt="${stock.symbol} support and resistance chart"
-                width="140"
-            >
-        </a>
-    </td>
-`;
 
-            tableBody.appendChild(row);
-        });
-
-        dashboardStatus.textContent =
-            `${results.length} stocks processed in latest run.`;
+        renderCurrentPage();
 
     }
 
@@ -138,8 +989,10 @@ async function loadStockResults() {
             error
         );
 
+
         dashboardStatus.textContent =
             "Unable to load live market results.";
+
 
         tableBody.innerHTML = `
             <tr>
@@ -148,8 +1001,948 @@ async function loadStockResults() {
                 </td>
             </tr>
         `;
+
+
+        document.getElementById(
+            "pagination"
+        ).innerHTML =
+            "";
+
     }
+
 }
+
+
+/* =========================================
+   CHART CLEANUP
+   ========================================= */
+
+
+function destroyInteractiveChart() {
+
+    if (
+        interactiveChart
+    ) {
+
+        interactiveChart.remove();
+
+    }
+
+
+    interactiveChart =
+        null;
+
+
+    candleSeries =
+        null;
+
+
+    volumeSeries =
+        null;
+
+
+    currentChartHistory =
+        [];
+
+
+    document.getElementById(
+        "interactive-chart"
+    ).innerHTML =
+        "";
+
+}
+
+
+/* =========================================
+   CHART RANGE BUTTONS
+   ========================================= */
+
+
+function setActiveRangeButton(
+    button
+) {
+
+    document
+        .querySelectorAll(
+            ".chart-toolbar button"
+        )
+        .forEach(
+            rangeButton => {
+
+                rangeButton.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    if (button) {
+
+        button.classList.add(
+            "active"
+        );
+
+    }
+
+}
+
+
+function setChartRange(
+    range
+) {
+
+    if (
+        !interactiveChart ||
+        !currentChartHistory.length
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        range === "all"
+    ) {
+
+        interactiveChart
+            .timeScale()
+            .fitContent();
+
+
+        return;
+
+    }
+
+
+    const barCount =
+        Number(range);
+
+
+    const totalBars =
+        currentChartHistory.length;
+
+
+    const visibleBars =
+        Math.min(
+            barCount,
+            totalBars
+        );
+
+
+    interactiveChart
+        .timeScale()
+        .setVisibleLogicalRange(
+            {
+                from:
+                    Math.max(
+                        0,
+                        totalBars -
+                        visibleBars
+                    ),
+
+                to:
+                    totalBars +
+                    3
+            }
+        );
+
+}
+
+
+/* =========================================
+   CREATE TRADINGVIEW LIGHTWEIGHT CHART
+   ========================================= */
+
+
+function buildTradingChart(
+    symbol,
+    history
+) {
+
+    destroyInteractiveChart();
+
+
+    if (
+        typeof LightweightCharts ===
+        "undefined"
+    ) {
+
+        throw new Error(
+            "Trading chart library did not load."
+        );
+
+    }
+
+
+    const chartContainer =
+        document.getElementById(
+            "interactive-chart"
+        );
+
+
+    interactiveChart =
+        LightweightCharts.createChart(
+            chartContainer,
+            {
+
+                autoSize: true,
+
+
+                layout: {
+
+                    background: {
+                        type:
+                            LightweightCharts
+                                .ColorType
+                                .Solid,
+
+                        color:
+                            "#0b0f14"
+                    },
+
+
+                    textColor:
+                        "#9aa5af",
+
+
+                    fontFamily:
+                        "Arial, Helvetica, sans-serif",
+
+
+                    attributionLogo:
+                        true,
+
+
+                    panes: {
+
+                        separatorColor:
+                            "#28313a",
+
+                        separatorHoverColor:
+                            "#3b4650",
+
+                        enableResize:
+                            true
+
+                    }
+
+                },
+
+
+                grid: {
+
+                    vertLines: {
+                        color:
+                            "rgba(124, 140, 154, 0.10)"
+                    },
+
+
+                    horzLines: {
+                        color:
+                            "rgba(124, 140, 154, 0.10)"
+                    }
+
+                },
+
+
+                crosshair: {
+
+                    mode:
+                        LightweightCharts
+                            .CrosshairMode
+                            .Normal,
+
+
+                    vertLine: {
+
+                        color:
+                            "rgba(224, 230, 236, 0.45)",
+
+                        width:
+                            1,
+
+                        labelBackgroundColor:
+                            "#26323d"
+
+                    },
+
+
+                    horzLine: {
+
+                        color:
+                            "rgba(224, 230, 236, 0.45)",
+
+                        width:
+                            1,
+
+                        labelBackgroundColor:
+                            "#26323d"
+
+                    }
+
+                },
+
+
+                rightPriceScale: {
+
+                    borderColor:
+                        "#303943",
+
+                    scaleMargins: {
+                        top: 0.08,
+                        bottom: 0.08
+                    }
+
+                },
+
+
+                timeScale: {
+
+                    borderColor:
+                        "#303943",
+
+                    rightOffset:
+                        5,
+
+                    barSpacing:
+                        9,
+
+                    minBarSpacing:
+                        3,
+
+                    timeVisible:
+                        false,
+
+                    secondsVisible:
+                        false
+
+                },
+
+
+                handleScroll: {
+
+                    mouseWheel:
+                        true,
+
+                    pressedMouseMove:
+                        true,
+
+                    horzTouchDrag:
+                        true,
+
+                    vertTouchDrag:
+                        true
+
+                },
+
+
+                handleScale: {
+
+                    axisPressedMouseMove:
+                        true,
+
+                    mouseWheel:
+                        true,
+
+                    pinch:
+                        true
+
+                }
+
+            }
+        );
+
+
+    candleSeries =
+        interactiveChart.addSeries(
+            LightweightCharts.CandlestickSeries,
+            {
+
+                title:
+                    symbol,
+
+
+                upColor:
+                    "#26d07c",
+
+
+                downColor:
+                    "#ff5f6d",
+
+
+                borderVisible:
+                    false,
+
+
+                wickUpColor:
+                    "#26d07c",
+
+
+                wickDownColor:
+                    "#ff5f6d",
+
+
+                priceLineVisible:
+                    true,
+
+
+                lastValueVisible:
+                    true
+
+            },
+            0
+        );
+
+
+    volumeSeries =
+        interactiveChart.addSeries(
+            LightweightCharts.HistogramSeries,
+            {
+
+                priceFormat: {
+                    type: "volume"
+                },
+
+
+                priceLineVisible:
+                    false,
+
+
+                lastValueVisible:
+                    false
+
+            },
+            1
+        );
+
+
+    const candleData =
+        history.map(
+            item => ({
+                time:
+                    item.time,
+
+                open:
+                    Number(item.open),
+
+                high:
+                    Number(item.high),
+
+                low:
+                    Number(item.low),
+
+                close:
+                    Number(item.close)
+            })
+        );
+
+
+    const volumeData =
+        history.map(
+            item => ({
+                time:
+                    item.time,
+
+                value:
+                    Number(item.volume) || 0,
+
+                color:
+                    Number(item.close) >=
+                    Number(item.open)
+                        ? "rgba(38, 208, 124, 0.45)"
+                        : "rgba(255, 95, 109, 0.45)"
+            })
+        );
+
+
+    candleSeries.setData(
+        candleData
+    );
+
+
+    volumeSeries.setData(
+        volumeData
+    );
+
+
+    currentChartHistory =
+        history;
+
+
+    const panes =
+        interactiveChart.panes();
+
+
+    if (
+        panes.length > 1
+    ) {
+
+        panes[1].setHeight(
+            130
+        );
+
+    }
+
+
+    interactiveChart
+        .subscribeCrosshairMove(
+            parameter => {
+
+                if (
+                    !parameter ||
+                    !parameter.time
+                ) {
+
+                    const latest =
+                        currentChartHistory[
+                            currentChartHistory.length - 1
+                        ];
+
+
+                    updateOhlcReadout(
+                        latest,
+                        latest
+                            ? latest.volume
+                            : null
+                    );
+
+
+                    return;
+
+                }
+
+
+                const candle =
+                    parameter.seriesData.get(
+                        candleSeries
+                    );
+
+
+                const volume =
+                    parameter.seriesData.get(
+                        volumeSeries
+                    );
+
+
+                if (
+                    !candle ||
+                    candle.open === undefined
+                ) {
+
+                    return;
+
+                }
+
+
+                updateOhlcReadout(
+                    candle,
+                    volume &&
+                    volume.value !== undefined
+                        ? volume.value
+                        : null
+                );
+
+            }
+        );
+
+
+    const latest =
+        history[
+            history.length - 1
+        ];
+
+
+    updateOhlcReadout(
+        latest,
+        latest.volume
+    );
+
+
+    setChartRange(
+        66
+    );
+
+}
+
+
+/* =========================================
+   OPEN CHART MODAL
+   ========================================= */
+
+
+async function openInteractiveChart(
+    symbol,
+    chartButton
+) {
+
+    const modal =
+        document.getElementById(
+            "chart-modal"
+        );
+
+
+    const modalTitle =
+        document.getElementById(
+            "chart-modal-title"
+        );
+
+
+    const modalStatus =
+        document.getElementById(
+            "chart-modal-status"
+        );
+
+
+    const loading =
+        document.getElementById(
+            "chart-loading"
+        );
+
+
+    activeChartButton =
+        chartButton;
+
+
+    modal.hidden =
+        false;
+
+
+    document.body.classList.add(
+        "chart-modal-open"
+    );
+
+
+    modalTitle.textContent =
+        `${symbol} Interactive Chart`;
+
+
+    modalStatus.textContent =
+        `Loading ${symbol} daily OHLC price history...`;
+
+
+    loading.hidden =
+        false;
+
+
+    loading.textContent =
+        "Loading interactive chart...";
+
+
+    updateOhlcReadout(
+        null,
+        null
+    );
+
+
+    setActiveRangeButton(
+        document.querySelector(
+            '.chart-toolbar button[data-range="66"]'
+        )
+    );
+
+
+    document.getElementById(
+        "chart-modal-close"
+    ).focus();
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}?symbol=${encodeURIComponent(symbol)}`
+            );
+
+
+        if (
+            !response.ok
+        ) {
+
+            throw new Error(
+                `Chart request failed: ${response.status}`
+            );
+
+        }
+
+
+        const payload =
+            await response.json();
+
+
+        if (
+            !Array.isArray(
+                payload.history
+            ) ||
+            payload.history.length === 0
+        ) {
+
+            throw new Error(
+                `No historical data returned for ${symbol}.`
+            );
+
+        }
+
+
+        const history =
+            payload.history
+                .map(
+                    item => ({
+                        time:
+                            String(item.time),
+
+                        open:
+                            Number(item.open),
+
+                        high:
+                            Number(item.high),
+
+                        low:
+                            Number(item.low),
+
+                        close:
+                            Number(item.close),
+
+                        volume:
+                            Number(item.volume) || 0
+                    })
+                )
+                .filter(
+                    item =>
+
+                        item.time &&
+
+                        Number.isFinite(
+                            item.open
+                        ) &&
+
+                        Number.isFinite(
+                            item.high
+                        ) &&
+
+                        Number.isFinite(
+                            item.low
+                        ) &&
+
+                        Number.isFinite(
+                            item.close
+                        )
+
+                )
+                .sort(
+                    (
+                        first,
+                        second
+                    ) =>
+                        first.time.localeCompare(
+                            second.time
+                        )
+                );
+
+
+        if (
+            history.length === 0
+        ) {
+
+            throw new Error(
+                `No usable OHLC data returned for ${symbol}.`
+            );
+
+        }
+
+
+        buildTradingChart(
+            symbol,
+            history
+        );
+
+
+        modalStatus.textContent =
+            `${history.length} trading days loaded for ${symbol}. ` +
+            `Move the crosshair across any candle to inspect that day's prices.`;
+
+
+        loading.hidden =
+            true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Interactive chart error:",
+            error
+        );
+
+
+        destroyInteractiveChart();
+
+
+        modalStatus.textContent =
+            `Unable to load ${symbol} interactive chart.`;
+
+
+        loading.hidden =
+            false;
+
+
+        loading.textContent =
+            "Interactive chart could not be loaded. Close the window and try again.";
+
+    }
+
+}
+
+
+/* =========================================
+   CLOSE CHART
+   ========================================= */
+
+
+function closeInteractiveChart() {
+
+    const modal =
+        document.getElementById(
+            "chart-modal"
+        );
+
+
+    modal.hidden =
+        true;
+
+
+    document.body.classList.remove(
+        "chart-modal-open"
+    );
+
+
+    destroyInteractiveChart();
+
+
+    updateOhlcReadout(
+        null,
+        null
+    );
+
+
+    if (
+        activeChartButton
+    ) {
+
+        activeChartButton.focus();
+
+    }
+
+
+    activeChartButton =
+        null;
+
+}
+
+
+/* =========================================
+   RANGE BUTTON EVENTS
+   ========================================= */
+
+
+document
+    .querySelectorAll(
+        ".chart-toolbar button"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    setActiveRangeButton(
+                        button
+                    );
+
+
+                    setChartRange(
+                        button.dataset.range
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================
+   CLOSE BUTTON
+   ========================================= */
+
+
+document
+    .getElementById(
+        "chart-modal-close"
+    )
+    .addEventListener(
+        "click",
+        closeInteractiveChart
+    );
+
+
+/* =========================================
+   CLICK OUTSIDE MODAL
+   ========================================= */
+
+
+document
+    .getElementById(
+        "chart-modal"
+    )
+    .addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target.id ===
+                "chart-modal"
+            ) {
+
+                closeInteractiveChart();
+
+            }
+
+        }
+    );
+
+
+/* =========================================
+   ESCAPE KEY
+   ========================================= */
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Escape" &&
+            !document
+                .getElementById(
+                    "chart-modal"
+                )
+                .hidden
+        ) {
+
+            closeInteractiveChart();
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   START DASHBOARD
+   ========================================= */
 
 
 loadStockResults();
@@ -157,4 +1950,5 @@ loadStockResults();
 </script>
 
 </body>
+
 </html>
