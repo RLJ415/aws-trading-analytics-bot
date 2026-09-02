@@ -1,5 +1,5 @@
-from analysis.rsi import calculate_rsi
-from analysis.support_resistance import find_support_resistance
+from src.analysis.rsi import calculate_rsi
+from src.analysis.support_resistance import find_support_resistance
 
 
 def evaluate_stock(df):
@@ -8,7 +8,8 @@ def evaluate_stock(df):
     RSI, price location, bounce or rejection confirmation, and
     estimated reward-to-risk.
 
-    Returns a recommendation with supporting and opposing evidence.
+    Also carries confirmed zones, swing highs, and swing lows
+    forward for the interactive dashboard chart.
     """
 
     if len(df) < 15:
@@ -18,6 +19,8 @@ def evaluate_stock(df):
             "rsi": None,
             "support": None,
             "resistance": None,
+            "all_supports": [],
+            "all_resistances": [],
             "confidence": 0,
             "reward_risk": None,
             "reasoning": [
@@ -26,6 +29,8 @@ def evaluate_stock(df):
             "why_not": [
                 "At least 15 trading periods are required."
             ],
+            "swing_highs": [],
+            "swing_lows": [],
         }
 
     current_price = float(df["Close"].iloc[-1])
@@ -41,6 +46,8 @@ def evaluate_stock(df):
             "rsi": None,
             "support": None,
             "resistance": None,
+            "all_supports": [],
+            "all_resistances": [],
             "confidence": 0,
             "reward_risk": None,
             "reasoning": [
@@ -49,6 +56,8 @@ def evaluate_stock(df):
             "why_not": [
                 "The RSI value is unavailable."
             ],
+            "swing_highs": [],
+            "swing_lows": [],
         }
 
     latest_rsi = float(latest_rsi)
@@ -57,6 +66,26 @@ def evaluate_stock(df):
 
     nearest_support = zones["support"]
     nearest_resistance = zones["resistance"]
+
+    all_supports = zones.get(
+        "all_supports",
+        [],
+    )
+
+    all_resistances = zones.get(
+        "all_resistances",
+        [],
+    )
+
+    swing_highs = zones.get(
+        "swing_highs",
+        [],
+    )
+
+    swing_lows = zones.get(
+        "swing_lows",
+        [],
+    )
 
     recommendation = "HOLD"
     confidence = 0
@@ -68,11 +97,19 @@ def evaluate_stock(df):
     near_support = False
     near_resistance = False
 
-    bounce_confirmed = current_price > previous_close
-    rejection_confirmed = current_price < previous_close
+    bounce_confirmed = (
+        current_price > previous_close
+    )
+
+    rejection_confirmed = (
+        current_price < previous_close
+    )
 
     if nearest_support:
-        support_buffer = nearest_support["zone_high"] * 0.01
+        support_buffer = (
+            nearest_support["zone_high"]
+            * 0.01
+        )
 
         near_support = (
             nearest_support["zone_low"] - support_buffer
@@ -81,7 +118,10 @@ def evaluate_stock(df):
         )
 
     if nearest_resistance:
-        resistance_buffer = nearest_resistance["zone_high"] * 0.01
+        resistance_buffer = (
+            nearest_resistance["zone_high"]
+            * 0.01
+        )
 
         near_resistance = (
             nearest_resistance["zone_low"] - resistance_buffer
@@ -90,13 +130,27 @@ def evaluate_stock(df):
         )
 
     if nearest_support and nearest_resistance:
-        stop_loss = nearest_support["zone_low"] * 0.99
-        target_price = nearest_resistance["zone_low"]
+        stop_loss = (
+            nearest_support["zone_low"]
+            * 0.99
+        )
 
-        risk_per_share = current_price - stop_loss
-        reward_per_share = target_price - current_price
+        target_price = (
+            nearest_resistance["zone_low"]
+        )
 
-        if risk_per_share > 0 and reward_per_share > 0:
+        risk_per_share = (
+            current_price - stop_loss
+        )
+
+        reward_per_share = (
+            target_price - current_price
+        )
+
+        if (
+            risk_per_share > 0
+            and reward_per_share > 0
+        ):
             reward_risk = round(
                 reward_per_share / risk_per_share,
                 2,
@@ -106,7 +160,8 @@ def evaluate_stock(df):
 
     if nearest_support:
         buy_score += int(
-            nearest_support["zone_strength"] * 0.4
+            nearest_support["zone_strength"]
+            * 0.4
         )
 
     if latest_rsi < 30:
@@ -120,16 +175,23 @@ def evaluate_stock(df):
     if bounce_confirmed:
         buy_score += 10
 
-    if reward_risk is not None and reward_risk >= 2:
+    if (
+        reward_risk is not None
+        and reward_risk >= 2
+    ):
         buy_score += 10
 
-    buy_score = min(100, buy_score)
+    buy_score = min(
+        100,
+        buy_score,
+    )
 
     sell_score = 0
 
     if nearest_resistance:
         sell_score += int(
-            nearest_resistance["zone_strength"] * 0.4
+            nearest_resistance["zone_strength"]
+            * 0.4
         )
 
     if latest_rsi > 70:
@@ -143,7 +205,10 @@ def evaluate_stock(df):
     if rejection_confirmed:
         sell_score += 10
 
-    sell_score = min(100, sell_score)
+    sell_score = min(
+        100,
+        sell_score,
+    )
 
     if (
         nearest_support
@@ -161,17 +226,21 @@ def evaluate_stock(df):
         reasoning.append(
             "Price is at or near a confirmed support zone."
         )
+
         reasoning.append(
             f"Support has {nearest_support['touches']} touches."
         )
+
         reasoning.append(
             f"Support zone strength is "
             f"{nearest_support['zone_strength']}."
         )
+
         reasoning.append(
             f"RSI is {round(latest_rsi, 2)}, "
             "showing weak momentum."
         )
+
         reasoning.append(
             "The latest close is above the previous close, "
             "confirming a possible bounce."
@@ -179,7 +248,8 @@ def evaluate_stock(df):
 
         if reward_risk is not None:
             reasoning.append(
-                f"Estimated reward-to-risk is {reward_risk}:1."
+                f"Estimated reward-to-risk is "
+                f"{reward_risk}:1."
             )
 
         if nearest_resistance is None:
@@ -200,25 +270,32 @@ def evaluate_stock(df):
         reasoning.append(
             "Price is at or near a confirmed resistance zone."
         )
+
         reasoning.append(
             f"Resistance has "
             f"{nearest_resistance['touches']} touches."
         )
+
         reasoning.append(
             f"Resistance zone strength is "
             f"{nearest_resistance['zone_strength']}."
         )
+
         reasoning.append(
             f"RSI is {round(latest_rsi, 2)}, "
             "showing strong momentum."
         )
+
         reasoning.append(
             "The latest close is below the previous close, "
             "confirming a possible rejection."
         )
 
     else:
-        confidence = max(buy_score, sell_score)
+        confidence = max(
+            buy_score,
+            sell_score,
+        )
 
         reasoning.append(
             "No complete high-confidence trade setup was confirmed."
@@ -239,20 +316,30 @@ def evaluate_stock(df):
                 "RSI is neutral rather than stretched."
             )
 
-        if near_support and not bounce_confirmed:
+        if (
+            near_support
+            and not bounce_confirmed
+        ):
             why_not.append(
                 "Price has not confirmed a bounce from support."
             )
 
-        if near_resistance and not rejection_confirmed:
+        if (
+            near_resistance
+            and not rejection_confirmed
+        ):
             why_not.append(
                 "Price has not confirmed a rejection "
                 "from resistance."
             )
 
-        if reward_risk is not None and reward_risk < 2:
+        if (
+            reward_risk is not None
+            and reward_risk < 2
+        ):
             why_not.append(
-                f"Reward-to-risk is only {reward_risk}:1."
+                f"Reward-to-risk is only "
+                f"{reward_risk}:1."
             )
 
         if not why_not:
@@ -266,8 +353,12 @@ def evaluate_stock(df):
         "rsi": round(latest_rsi, 2),
         "support": nearest_support,
         "resistance": nearest_resistance,
+        "all_supports": all_supports,
+        "all_resistances": all_resistances,
         "confidence": confidence,
         "reward_risk": reward_risk,
         "reasoning": reasoning,
         "why_not": why_not,
+        "swing_highs": swing_highs,
+        "swing_lows": swing_lows,
     }

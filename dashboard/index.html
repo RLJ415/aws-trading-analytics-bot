@@ -259,6 +259,13 @@
         </div>
 
 
+        <div
+            id="strategy-analysis"
+            class="strategy-analysis"
+            hidden
+        ></div>
+
+
         <div class="chart-toolbar">
 
             <span>
@@ -309,6 +316,12 @@
             <div
                 id="interactive-chart"
                 class="interactive-chart"
+            ></div>
+
+            <div
+                id="chart-zone-overlay"
+                class="chart-zone-overlay"
+                aria-hidden="true"
             ></div>
 
             <div
@@ -380,90 +393,57 @@
 const API_URL =
     "https://429683gmgj.execute-api.us-east-1.amazonaws.com/prod/results";
 
+const STOCKS_PER_PAGE = 20;
 
-const STOCKS_PER_PAGE =
-    20;
-
-
-let stockResults =
-    [];
-
-
-let currentPage =
-    1;
-
-
-let activeChartButton =
-    null;
-
-
-let interactiveChart =
-    null;
-
-
-let candleSeries =
-    null;
-
-
-let volumeSeries =
-    null;
-
-
-let currentChartHistory =
-    [];
-
-
-/* =========================================
-   BASIC FORMATTING
-   ========================================= */
+let stockResults = [];
+let currentPage = 1;
+let activeChartButton = null;
+let interactiveChart = null;
+let candleSeries = null;
+let volumeSeries = null;
+let seriesMarkers = null;
+let currentChartHistory = [];
+let currentChartStock = null;
+let zoneOverlayFrame = null;
 
 
 function formatMoney(value) {
+    const number = Number(value);
 
-    const number =
-        Number(value);
-
-
-    if (!Number.isFinite(number)) {
-
-        return "-";
-
-    }
+    return Number.isFinite(number)
+        ? `$${number.toFixed(2)}`
+        : "-";
+}
 
 
-    return `$${number.toFixed(2)}`;
+function formatNumber(
+    value,
+    decimals = 0
+) {
+    const number = Number(value);
 
+    return Number.isFinite(number)
+        ? number.toFixed(decimals)
+        : "-";
 }
 
 
 function formatVolume(value) {
+    const number = Number(value);
 
-    const number =
-        Number(value);
-
-
-    if (!Number.isFinite(number)) {
-
-        return "-";
-
-    }
-
-
-    return Math
-        .round(number)
-        .toLocaleString("en-US");
-
+    return Number.isFinite(number)
+        ? Math
+            .round(number)
+            .toLocaleString("en-US")
+        : "-";
 }
 
 
 function formatDate(dateValue) {
 
     if (!dateValue) {
-
         return "-";
-
     }
-
 
     if (
         typeof dateValue === "object" &&
@@ -487,24 +467,17 @@ function formatDate(dateValue) {
                 timeZone: "UTC"
             }
         );
-
     }
-
 
     const dateString =
         String(dateValue);
 
-
     const parts =
         dateString.split("-");
 
-
     if (parts.length !== 3) {
-
         return dateString;
-
     }
-
 
     return new Date(
         Date.UTC(
@@ -521,7 +494,61 @@ function formatDate(dateValue) {
             timeZone: "UTC"
         }
     );
+}
 
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+function getRecommendationClass(
+    recommendation
+) {
+
+    const value =
+        String(
+            recommendation ||
+            "HOLD"
+        ).toUpperCase();
+
+    if (value === "BUY") {
+        return "rec-buy";
+    }
+
+    if (value === "SELL") {
+        return "rec-sell";
+    }
+
+    return "rec-hold";
+}
+
+
+function getDecisionColor(
+    recommendation
+) {
+
+    const value =
+        String(
+            recommendation ||
+            "HOLD"
+        ).toUpperCase();
+
+    if (value === "BUY") {
+        return "#00c805";
+    }
+
+    if (value === "SELL") {
+        return "#ff4d5a";
+    }
+
+    return "#ffcc00";
 }
 
 
@@ -534,55 +561,459 @@ function updateOhlcReadout(
         "ohlc-date"
     ).textContent =
         candle
-            ? formatDate(candle.time)
+            ? formatDate(
+                candle.time
+            )
             : "-";
-
 
     document.getElementById(
         "ohlc-open"
     ).textContent =
         candle
-            ? formatMoney(candle.open)
+            ? formatMoney(
+                candle.open
+            )
             : "-";
-
 
     document.getElementById(
         "ohlc-high"
     ).textContent =
         candle
-            ? formatMoney(candle.high)
+            ? formatMoney(
+                candle.high
+            )
             : "-";
-
 
     document.getElementById(
         "ohlc-low"
     ).textContent =
         candle
-            ? formatMoney(candle.low)
+            ? formatMoney(
+                candle.low
+            )
             : "-";
-
 
     document.getElementById(
         "ohlc-close"
     ).textContent =
         candle
-            ? formatMoney(candle.close)
+            ? formatMoney(
+                candle.close
+            )
             : "-";
-
 
     document.getElementById(
         "ohlc-volume"
     ).textContent =
         volume !== null
-            ? formatVolume(volume)
+            ? formatVolume(
+                volume
+            )
             : "-";
-
 }
 
 
-/* =========================================
-   PAGINATION
-   ========================================= */
+function normalizeZone(zone) {
+
+    if (
+        !zone ||
+        typeof zone !== "object"
+    ) {
+        return null;
+    }
+
+    const rawLow =
+        Number(
+            zone.zone_low
+        );
+
+    const rawHigh =
+        Number(
+            zone.zone_high
+        );
+
+    if (
+        !Number.isFinite(
+            rawLow
+        ) ||
+        !Number.isFinite(
+            rawHigh
+        )
+    ) {
+        return null;
+    }
+
+    return {
+        zone_low:
+            Math.min(
+                rawLow,
+                rawHigh
+            ),
+
+        zone_high:
+            Math.max(
+                rawLow,
+                rawHigh
+            ),
+
+        touches:
+            Number.isFinite(
+                Number(
+                    zone.touches
+                )
+            )
+                ? Number(
+                    zone.touches
+                )
+                : 0,
+
+        zone_strength:
+            Number.isFinite(
+                Number(
+                    zone.zone_strength
+                )
+            )
+                ? Number(
+                    zone.zone_strength
+                )
+                : 0
+    };
+}
+
+
+function getZones(
+    stock,
+    type
+) {
+
+    if (!stock) {
+        return [];
+    }
+
+    const allKey =
+        type === "support"
+            ? "all_supports"
+            : "all_resistances";
+
+    const nearestKey =
+        type === "support"
+            ? "support"
+            : "resistance";
+
+    const allZones =
+        Array.isArray(
+            stock[allKey]
+        )
+            ? stock[allKey]
+                .map(
+                    normalizeZone
+                )
+                .filter(
+                    Boolean
+                )
+            : [];
+
+    if (allZones.length) {
+        return allZones;
+    }
+
+    const nearest =
+        normalizeZone(
+            stock[nearestKey]
+        );
+
+    return nearest
+        ? [
+            nearest
+        ]
+        : [];
+}
+
+
+function renderZoneSummary(
+    title,
+    zone,
+    className
+) {
+
+    const normalized =
+        normalizeZone(
+            zone
+        );
+
+    if (!normalized) {
+
+        return `
+            <div class="strategy-zone-card ${className}">
+                <span>
+                    ${title}
+                </span>
+
+                <strong>
+                    No confirmed zone
+                </strong>
+
+                <small>
+                    4-touch minimum not available here
+                </small>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="strategy-zone-card ${className}">
+            <span>
+                ${title}
+            </span>
+
+            <strong>
+                ${formatMoney(
+                    normalized.zone_low
+                )}
+                –
+                ${formatMoney(
+                    normalized.zone_high
+                )}
+            </strong>
+
+            <small>
+                ${normalized.touches} touches ·
+                strength ${normalized.zone_strength}
+            </small>
+        </div>
+    `;
+}
+
+
+function renderReasonList(
+    title,
+    items,
+    className
+) {
+
+    const safeItems =
+        Array.isArray(
+            items
+        )
+            ? items
+            : [];
+
+    const content =
+        safeItems.length
+            ? `
+                <ul>
+                    ${
+                        safeItems
+                            .map(
+                                item =>
+                                    `<li>${escapeHtml(item)}</li>`
+                            )
+                            .join("")
+                    }
+                </ul>
+            `
+            : `
+                <p>
+                    None.
+                </p>
+            `;
+
+    return `
+        <div class="strategy-reason-card ${className}">
+            <h3>
+                ${title}
+            </h3>
+
+            ${content}
+        </div>
+    `;
+}
+
+
+function renderStrategyAnalysis(
+    stock
+) {
+
+    const container =
+        document.getElementById(
+            "strategy-analysis"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    if (!stock) {
+
+        container.innerHTML =
+            "";
+
+        container.hidden =
+            true;
+
+        return;
+    }
+
+    const recommendation =
+        String(
+            stock.recommendation ||
+            stock.decision?.type ||
+            "HOLD"
+        ).toUpperCase();
+
+    const confidence =
+        formatNumber(
+            stock.confidence,
+            0
+        );
+
+    const rsi =
+        formatNumber(
+            stock.rsi,
+            2
+        );
+
+    const rewardRisk =
+        Number.isFinite(
+            Number(
+                stock.reward_risk
+            )
+        )
+            ? `${Number(
+                stock.reward_risk
+            ).toFixed(2)}:1`
+            : "-";
+
+    container.innerHTML = `
+        <div class="strategy-summary-row">
+
+            <div
+                class="strategy-decision ${getRecommendationClass(
+                    recommendation
+                )}"
+            >
+                <span>
+                    Decision
+                </span>
+
+                <strong>
+                    ${escapeHtml(
+                        recommendation
+                    )}
+                </strong>
+            </div>
+
+
+            <div class="strategy-stat">
+
+                <span>
+                    Current Price
+                </span>
+
+                <strong>
+                    ${formatMoney(
+                        stock.current_price
+                    )}
+                </strong>
+
+            </div>
+
+
+            <div class="strategy-stat">
+
+                <span>
+                    RSI
+                </span>
+
+                <strong>
+                    ${rsi}
+                </strong>
+
+            </div>
+
+
+            <div class="strategy-stat">
+
+                <span>
+                    Confidence
+                </span>
+
+                <strong>
+                    ${confidence}
+                </strong>
+
+            </div>
+
+
+            <div class="strategy-stat">
+
+                <span>
+                    Reward / Risk
+                </span>
+
+                <strong>
+                    ${rewardRisk}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="strategy-zone-grid">
+
+            ${renderZoneSummary(
+                "Nearest Support",
+                stock.support,
+                "support-card"
+            )}
+
+            ${renderZoneSummary(
+                "Nearest Resistance",
+                stock.resistance,
+                "resistance-card"
+            )}
+
+        </div>
+
+
+        <div class="strategy-legend">
+
+            <span class="legend-buy">
+                BUY / SUPPORT / VALLEY
+            </span>
+
+            <span class="legend-sell">
+                SELL / RESISTANCE / PEAK
+            </span>
+
+            <span class="legend-hold">
+                HOLD
+            </span>
+
+        </div>
+
+
+        <div class="strategy-reason-grid">
+
+            ${renderReasonList(
+                "Why the bot sees it this way",
+                stock.reasoning,
+                "reasoning-card"
+            )}
+
+            ${renderReasonList(
+                "Why not a stronger trade",
+                stock.why_not,
+                "why-not-card"
+            )}
+
+        </div>
+    `;
+
+    container.hidden =
+        false;
+}
 
 
 function createPaginationButton(
@@ -597,27 +1028,21 @@ function createPaginationButton(
             "button"
         );
 
-
     button.type =
         "button";
-
 
     button.textContent =
         label;
 
-
     button.disabled =
         disabled;
-
 
     if (active) {
 
         button.classList.add(
             "active"
         );
-
     }
-
 
     button.addEventListener(
         "click",
@@ -626,9 +1051,7 @@ function createPaginationButton(
             currentPage =
                 page;
 
-
             renderCurrentPage();
-
 
             document
                 .getElementById(
@@ -636,17 +1059,17 @@ function createPaginationButton(
                 )
                 .scrollIntoView(
                     {
-                        behavior: "smooth",
-                        block: "start"
+                        behavior:
+                            "smooth",
+
+                        block:
+                            "start"
                     }
                 );
-
         }
     );
 
-
     return button;
-
 }
 
 
@@ -657,19 +1080,14 @@ function renderPagination() {
             "pagination"
         );
 
-
     pagination.innerHTML =
         "";
 
-
     if (
-        stockResults.length === 0
+        !stockResults.length
     ) {
-
         return;
-
     }
-
 
     const totalPages =
         Math.ceil(
@@ -677,15 +1095,11 @@ function renderPagination() {
             STOCKS_PER_PAGE
         );
 
-
     if (
         totalPages <= 1
     ) {
-
         return;
-
     }
-
 
     pagination.appendChild(
         createPaginationButton(
@@ -695,7 +1109,6 @@ function renderPagination() {
         )
     );
 
-
     pagination.appendChild(
         createPaginationButton(
             "Previous",
@@ -703,7 +1116,6 @@ function renderPagination() {
             currentPage === 1
         )
     );
-
 
     for (
         let page = 1;
@@ -713,15 +1125,15 @@ function renderPagination() {
 
         pagination.appendChild(
             createPaginationButton(
-                String(page),
+                String(
+                    page
+                ),
                 page,
                 false,
                 page === currentPage
             )
         );
-
     }
-
 
     pagination.appendChild(
         createPaginationButton(
@@ -731,7 +1143,6 @@ function renderPagination() {
         )
     );
 
-
     pagination.appendChild(
         createPaginationButton(
             "Last",
@@ -739,13 +1150,7 @@ function renderPagination() {
             currentPage === totalPages
         )
     );
-
 }
-
-
-/* =========================================
-   STOCK TABLE
-   ========================================= */
 
 
 function renderCurrentPage() {
@@ -755,15 +1160,13 @@ function renderCurrentPage() {
             "stock-results"
         );
 
-
     const dashboardStatus =
         document.getElementById(
             "dashboard-status"
         );
 
-
     if (
-        stockResults.length === 0
+        !stockResults.length
     ) {
 
         tableBody.innerHTML = `
@@ -774,21 +1177,16 @@ function renderCurrentPage() {
             </tr>
         `;
 
-
         dashboardStatus.textContent =
             "0 stocks processed in latest run.";
-
 
         document.getElementById(
             "pagination"
         ).innerHTML =
             "";
 
-
         return;
-
     }
-
 
     const totalPages =
         Math.ceil(
@@ -796,23 +1194,18 @@ function renderCurrentPage() {
             STOCKS_PER_PAGE
         );
 
-
     if (
         currentPage > totalPages
     ) {
-
         currentPage =
             totalPages;
-
     }
-
 
     const startIndex =
         (
             currentPage - 1
         ) *
         STOCKS_PER_PAGE;
-
 
     const endIndex =
         Math.min(
@@ -821,17 +1214,14 @@ function renderCurrentPage() {
             stockResults.length
         );
 
-
     const pageResults =
         stockResults.slice(
             startIndex,
             endIndex
         );
 
-
     tableBody.innerHTML =
         "";
-
 
     pageResults.forEach(
         stock => {
@@ -841,13 +1231,26 @@ function renderCurrentPage() {
                     "tr"
                 );
 
+            const symbol =
+                escapeHtml(
+                    stock.symbol ||
+                    "-"
+                );
+
+            const recommendation =
+                String(
+                    stock.recommendation ||
+                    "HOLD"
+                ).toUpperCase();
 
             const chartPreview =
                 stock.chart_url
                     ? `
                         <img
-                            src="${stock.chart_url}"
-                            alt="${stock.symbol} support and resistance chart"
+                            src="${escapeHtml(
+                                stock.chart_url
+                            )}"
+                            alt="${symbol} support and resistance chart"
                             width="140"
                         >
                     `
@@ -857,22 +1260,35 @@ function renderCurrentPage() {
                         </div>
                     `;
 
-
             row.innerHTML = `
                 <td>
-                    ${stock.symbol}
+                    ${symbol}
                 </td>
 
                 <td>
-                    ${stock.recommendation}
+                    <span
+                        class="recommendation-badge ${getRecommendationClass(
+                            recommendation
+                        )}"
+                    >
+                        ${escapeHtml(
+                            recommendation
+                        )}
+                    </span>
                 </td>
 
                 <td>
-                    ${stock.rsi}
+                    ${formatNumber(
+                        stock.rsi,
+                        2
+                    )}
                 </td>
 
                 <td>
-                    ${stock.confidence}
+                    ${formatNumber(
+                        stock.confidence,
+                        0
+                    )}
                 </td>
 
                 <td>
@@ -880,7 +1296,7 @@ function renderCurrentPage() {
                     <button
                         type="button"
                         class="chart-open-button"
-                        aria-label="Open interactive ${stock.symbol} chart"
+                        aria-label="Open interactive ${symbol} chart"
                     >
 
                         ${chartPreview}
@@ -894,47 +1310,34 @@ function renderCurrentPage() {
                 </td>
             `;
 
-
             const chartButton =
                 row.querySelector(
                     ".chart-open-button"
                 );
-
 
             chartButton.addEventListener(
                 "click",
                 () => {
 
                     openInteractiveChart(
-                        stock.symbol,
+                        stock,
                         chartButton
                     );
-
                 }
             );
-
 
             tableBody.appendChild(
                 row
             );
-
         }
     );
-
 
     dashboardStatus.textContent =
         `${stockResults.length} stocks processed in latest run. ` +
         `Showing ${startIndex + 1}-${endIndex}.`;
 
-
     renderPagination();
-
 }
-
-
-/* =========================================
-   LOAD DASHBOARD RESULTS
-   ========================================= */
 
 
 async function loadStockResults() {
@@ -944,12 +1347,10 @@ async function loadStockResults() {
             "stock-results"
         );
 
-
     const dashboardStatus =
         document.getElementById(
             "dashboard-status"
         );
-
 
     try {
 
@@ -958,7 +1359,6 @@ async function loadStockResults() {
                 API_URL
             );
 
-
         if (
             !response.ok
         ) {
@@ -966,20 +1366,43 @@ async function loadStockResults() {
             throw new Error(
                 `API request failed: ${response.status}`
             );
-
         }
 
-
-        stockResults =
+        const payload =
             await response.json();
 
+        if (
+            Array.isArray(
+                payload
+            )
+        ) {
+
+            stockResults =
+                payload;
+        }
+
+        else if (
+            payload &&
+            Array.isArray(
+                payload.results
+            )
+        ) {
+
+            stockResults =
+                payload.results;
+        }
+
+        else {
+
+            throw new Error(
+                "Dashboard API returned an unexpected data format."
+            );
+        }
 
         currentPage =
             1;
 
-
         renderCurrentPage();
-
     }
 
     catch (error) {
@@ -989,10 +1412,8 @@ async function loadStockResults() {
             error
         );
 
-
         dashboardStatus.textContent =
             "Unable to load live market results.";
-
 
         tableBody.innerHTML = `
             <tr>
@@ -1002,60 +1423,75 @@ async function loadStockResults() {
             </tr>
         `;
 
-
         document.getElementById(
             "pagination"
         ).innerHTML =
             "";
-
     }
-
 }
 
 
-/* =========================================
-   CHART CLEANUP
-   ========================================= */
+function clearZoneOverlay() {
+
+    const overlay =
+        document.getElementById(
+            "chart-zone-overlay"
+        );
+
+    if (overlay) {
+
+        overlay.innerHTML =
+            "";
+    }
+}
 
 
 function destroyInteractiveChart() {
+
+    if (
+        zoneOverlayFrame !== null
+    ) {
+
+        cancelAnimationFrame(
+            zoneOverlayFrame
+        );
+
+        zoneOverlayFrame =
+            null;
+    }
 
     if (
         interactiveChart
     ) {
 
         interactiveChart.remove();
-
     }
-
 
     interactiveChart =
         null;
 
-
     candleSeries =
         null;
-
 
     volumeSeries =
         null;
 
+    seriesMarkers =
+        null;
 
     currentChartHistory =
         [];
 
+    currentChartStock =
+        null;
 
     document.getElementById(
         "interactive-chart"
     ).innerHTML =
         "";
 
+    clearZoneOverlay();
 }
-
-
-/* =========================================
-   CHART RANGE BUTTONS
-   ========================================= */
 
 
 function setActiveRangeButton(
@@ -1069,22 +1505,20 @@ function setActiveRangeButton(
         .forEach(
             rangeButton => {
 
-                rangeButton.classList.remove(
-                    "active"
-                );
-
+                rangeButton
+                    .classList
+                    .remove(
+                        "active"
+                    );
             }
         );
-
 
     if (button) {
 
         button.classList.add(
             "active"
         );
-
     }
-
 }
 
 
@@ -1098,9 +1532,7 @@ function setChartRange(
     ) {
 
         return;
-
     }
-
 
     if (
         range === "all"
@@ -1110,26 +1542,24 @@ function setChartRange(
             .timeScale()
             .fitContent();
 
+        scheduleZoneOverlayUpdate();
 
         return;
-
     }
 
-
     const barCount =
-        Number(range);
-
+        Number(
+            range
+        );
 
     const totalBars =
         currentChartHistory.length;
-
 
     const visibleBars =
         Math.min(
             barCount,
             totalBars
         );
-
 
     interactiveChart
         .timeScale()
@@ -1148,21 +1578,477 @@ function setChartRange(
             }
         );
 
+    scheduleZoneOverlayUpdate();
 }
 
 
-/* =========================================
-   CREATE TRADINGVIEW LIGHTWEIGHT CHART
-   ========================================= */
+function buildChartMarkers(
+    stock,
+    history
+) {
+
+    if (
+        !stock ||
+        !history.length
+    ) {
+
+        return [];
+    }
+
+    const validTimes =
+        new Set(
+            history.map(
+                item =>
+                    String(
+                        item.time
+                    )
+            )
+        );
+
+    const markers =
+        [];
+
+    const swingHighs =
+        Array.isArray(
+            stock.swing_highs
+        )
+            ? stock.swing_highs
+            : [];
+
+    const swingLows =
+        Array.isArray(
+            stock.swing_lows
+        )
+            ? stock.swing_lows
+            : [];
+
+    swingHighs.forEach(
+        point => {
+
+            const time =
+                String(
+                    point?.time ||
+                    ""
+                );
+
+            if (
+                !validTimes.has(
+                    time
+                )
+            ) {
+                return;
+            }
+
+            markers.push({
+                time:
+                    time,
+
+                position:
+                    "aboveBar",
+
+                color:
+                    "#ff5f6d",
+
+                shape:
+                    "arrowDown",
+
+                text:
+                    "PEAK",
+
+                priority:
+                    10
+            });
+        }
+    );
+
+    swingLows.forEach(
+        point => {
+
+            const time =
+                String(
+                    point?.time ||
+                    ""
+                );
+
+            if (
+                !validTimes.has(
+                    time
+                )
+            ) {
+                return;
+            }
+
+            markers.push({
+                time:
+                    time,
+
+                position:
+                    "belowBar",
+
+                color:
+                    "#26d07c",
+
+                shape:
+                    "arrowUp",
+
+                text:
+                    "VALLEY",
+
+                priority:
+                    10
+            });
+        }
+    );
+
+    const recommendation =
+        String(
+            stock.decision?.type ||
+            stock.recommendation ||
+            "HOLD"
+        ).toUpperCase();
+
+    const fallbackTime =
+        String(
+            history[
+                history.length - 1
+            ].time
+        );
+
+    const decisionTime =
+        String(
+            stock.decision?.time ||
+            fallbackTime
+        );
+
+    if (
+        validTimes.has(
+            decisionTime
+        )
+    ) {
+
+        let position =
+            "aboveBar";
+
+        let shape =
+            "circle";
+
+        if (
+            recommendation === "BUY"
+        ) {
+
+            position =
+                "belowBar";
+
+            shape =
+                "arrowUp";
+        }
+
+        else if (
+            recommendation === "SELL"
+        ) {
+
+            position =
+                "aboveBar";
+
+            shape =
+                "arrowDown";
+        }
+
+        markers.push({
+            time:
+                decisionTime,
+
+            position:
+                position,
+
+            color:
+                getDecisionColor(
+                    recommendation
+                ),
+
+            shape:
+                shape,
+
+            text:
+                recommendation,
+
+            priority:
+                20
+        });
+    }
+
+    return markers
+        .sort(
+            (
+                first,
+                second
+            ) => {
+
+                const timeCompare =
+                    first.time.localeCompare(
+                        second.time
+                    );
+
+                if (
+                    timeCompare !== 0
+                ) {
+
+                    return timeCompare;
+                }
+
+                return (
+                    first.priority -
+                    second.priority
+                );
+            }
+        )
+        .map(
+            ({
+                priority,
+                ...marker
+            }) =>
+                marker
+        );
+}
+
+
+function addCurrentPriceLine(
+    stock
+) {
+
+    if (
+        !candleSeries ||
+        !stock
+    ) {
+
+        return;
+    }
+
+    const currentPrice =
+        Number(
+            stock.current_price
+        );
+
+    if (
+        !Number.isFinite(
+            currentPrice
+        )
+    ) {
+
+        return;
+    }
+
+    const recommendation =
+        String(
+            stock.decision?.type ||
+            stock.recommendation ||
+            "HOLD"
+        ).toUpperCase();
+
+    candleSeries
+        .createPriceLine(
+            {
+                price:
+                    currentPrice,
+
+                color:
+                    getDecisionColor(
+                        recommendation
+                    ),
+
+                lineWidth:
+                    2,
+
+                axisLabelVisible:
+                    true,
+
+                title:
+                    `${recommendation} · CURRENT`
+            }
+        );
+}
+
+
+function updateZoneOverlays() {
+
+    zoneOverlayFrame =
+        null;
+
+    if (
+        !candleSeries ||
+        !currentChartStock
+    ) {
+
+        clearZoneOverlay();
+
+        return;
+    }
+
+    const overlay =
+        document.getElementById(
+            "chart-zone-overlay"
+        );
+
+    if (
+        !overlay
+    ) {
+
+        return;
+    }
+
+    overlay.innerHTML =
+        "";
+
+    const zoneGroups = [
+        {
+            type:
+                "support",
+
+            label:
+                "SUPPORT",
+
+            className:
+                "chart-zone-support"
+        },
+        {
+            type:
+                "resistance",
+
+            label:
+                "RESISTANCE",
+
+            className:
+                "chart-zone-resistance"
+        }
+    ];
+
+    zoneGroups.forEach(
+        group => {
+
+            getZones(
+                currentChartStock,
+                group.type
+            ).forEach(
+                zone => {
+
+                    const highY =
+                        candleSeries
+                            .priceToCoordinate(
+                                zone.zone_high
+                            );
+
+                    const lowY =
+                        candleSeries
+                            .priceToCoordinate(
+                                zone.zone_low
+                            );
+
+                    if (
+                        highY === null ||
+                        lowY === null ||
+                        !Number.isFinite(
+                            Number(
+                                highY
+                            )
+                        ) ||
+                        !Number.isFinite(
+                            Number(
+                                lowY
+                            )
+                        )
+                    ) {
+
+                        return;
+                    }
+
+                    const top =
+                        Math.min(
+                            highY,
+                            lowY
+                        );
+
+                    const rawHeight =
+                        Math.abs(
+                            lowY -
+                            highY
+                        );
+
+                    const height =
+                        Math.max(
+                            6,
+                            rawHeight
+                        );
+
+                    const band =
+                        document.createElement(
+                            "div"
+                        );
+
+                    band.className =
+                        `chart-zone-band ${group.className}`;
+
+                    band.style.top =
+                        `${
+                            top -
+                            (
+                                (
+                                    height -
+                                    rawHeight
+                                ) /
+                                2
+                            )
+                        }px`;
+
+                    band.style.height =
+                        `${height}px`;
+
+                    const label =
+                        document.createElement(
+                            "span"
+                        );
+
+                    label.textContent =
+                        `${group.label} · ` +
+                        `${zone.touches} touches · ` +
+                        `strength ${zone.zone_strength}`;
+
+                    band.appendChild(
+                        label
+                    );
+
+                    overlay.appendChild(
+                        band
+                    );
+                }
+            );
+        }
+    );
+}
+
+
+function scheduleZoneOverlayUpdate() {
+
+    if (
+        zoneOverlayFrame !== null
+    ) {
+
+        return;
+    }
+
+    zoneOverlayFrame =
+        requestAnimationFrame(
+            updateZoneOverlays
+        );
+}
 
 
 function buildTradingChart(
     symbol,
-    history
+    history,
+    stock
 ) {
 
     destroyInteractiveChart();
-
 
     if (
         typeof LightweightCharts ===
@@ -1172,23 +2058,30 @@ function buildTradingChart(
         throw new Error(
             "Trading chart library did not load."
         );
-
     }
 
+    if (
+        typeof LightweightCharts
+            .createSeriesMarkers !==
+        "function"
+    ) {
+
+        throw new Error(
+            "Trading chart marker plugin did not load."
+        );
+    }
 
     const chartContainer =
         document.getElementById(
             "interactive-chart"
         );
 
-
     interactiveChart =
         LightweightCharts.createChart(
             chartContainer,
             {
-
-                autoSize: true,
-
+                autoSize:
+                    true,
 
                 layout: {
 
@@ -1202,21 +2095,16 @@ function buildTradingChart(
                             "#0b0f14"
                     },
 
-
                     textColor:
                         "#9aa5af",
-
 
                     fontFamily:
                         "Arial, Helvetica, sans-serif",
 
-
                     attributionLogo:
                         true,
 
-
                     panes: {
-
                         separatorColor:
                             "#28313a",
 
@@ -1225,11 +2113,8 @@ function buildTradingChart(
 
                         enableResize:
                             true
-
                     }
-
                 },
-
 
                 grid: {
 
@@ -1238,14 +2123,11 @@ function buildTradingChart(
                             "rgba(124, 140, 154, 0.10)"
                     },
 
-
                     horzLines: {
                         color:
                             "rgba(124, 140, 154, 0.10)"
                     }
-
                 },
-
 
                 crosshair: {
 
@@ -1253,7 +2135,6 @@ function buildTradingChart(
                         LightweightCharts
                             .CrosshairMode
                             .Normal,
-
 
                     vertLine: {
 
@@ -1265,9 +2146,7 @@ function buildTradingChart(
 
                         labelBackgroundColor:
                             "#26323d"
-
                     },
-
 
                     horzLine: {
 
@@ -1279,11 +2158,8 @@ function buildTradingChart(
 
                         labelBackgroundColor:
                             "#26323d"
-
                     }
-
                 },
-
 
                 rightPriceScale: {
 
@@ -1291,12 +2167,13 @@ function buildTradingChart(
                         "#303943",
 
                     scaleMargins: {
-                        top: 0.08,
-                        bottom: 0.08
+                        top:
+                            0.08,
+
+                        bottom:
+                            0.08
                     }
-
                 },
-
 
                 timeScale: {
 
@@ -1317,9 +2194,7 @@ function buildTradingChart(
 
                     secondsVisible:
                         false
-
                 },
-
 
                 handleScroll: {
 
@@ -1334,9 +2209,7 @@ function buildTradingChart(
 
                     vertTouchDrag:
                         true
-
                 },
-
 
                 handleScale: {
 
@@ -1348,75 +2221,62 @@ function buildTradingChart(
 
                     pinch:
                         true
-
                 }
-
             }
         );
 
-
     candleSeries =
-        interactiveChart.addSeries(
-            LightweightCharts.CandlestickSeries,
-            {
+        interactiveChart
+            .addSeries(
+                LightweightCharts
+                    .CandlestickSeries,
+                {
+                    title:
+                        symbol,
 
-                title:
-                    symbol,
+                    upColor:
+                        "#26d07c",
 
+                    downColor:
+                        "#ff5f6d",
 
-                upColor:
-                    "#26d07c",
+                    borderVisible:
+                        false,
 
+                    wickUpColor:
+                        "#26d07c",
 
-                downColor:
-                    "#ff5f6d",
+                    wickDownColor:
+                        "#ff5f6d",
 
+                    priceLineVisible:
+                        false,
 
-                borderVisible:
-                    false,
-
-
-                wickUpColor:
-                    "#26d07c",
-
-
-                wickDownColor:
-                    "#ff5f6d",
-
-
-                priceLineVisible:
-                    true,
-
-
-                lastValueVisible:
-                    true
-
-            },
-            0
-        );
-
+                    lastValueVisible:
+                        true
+                },
+                0
+            );
 
     volumeSeries =
-        interactiveChart.addSeries(
-            LightweightCharts.HistogramSeries,
-            {
+        interactiveChart
+            .addSeries(
+                LightweightCharts
+                    .HistogramSeries,
+                {
+                    priceFormat: {
+                        type:
+                            "volume"
+                    },
 
-                priceFormat: {
-                    type: "volume"
+                    priceLineVisible:
+                        false,
+
+                    lastValueVisible:
+                        false
                 },
-
-
-                priceLineVisible:
-                    false,
-
-
-                lastValueVisible:
-                    false
-
-            },
-            1
-        );
-
+                1
+            );
 
     const candleData =
         history.map(
@@ -1425,19 +2285,26 @@ function buildTradingChart(
                     item.time,
 
                 open:
-                    Number(item.open),
+                    Number(
+                        item.open
+                    ),
 
                 high:
-                    Number(item.high),
+                    Number(
+                        item.high
+                    ),
 
                 low:
-                    Number(item.low),
+                    Number(
+                        item.low
+                    ),
 
                 close:
-                    Number(item.close)
+                    Number(
+                        item.close
+                    )
             })
         );
-
 
     const volumeData =
         history.map(
@@ -1446,34 +2313,39 @@ function buildTradingChart(
                     item.time,
 
                 value:
-                    Number(item.volume) || 0,
+                    Number(
+                        item.volume
+                    ) || 0,
 
                 color:
-                    Number(item.close) >=
-                    Number(item.open)
+                    Number(
+                        item.close
+                    ) >=
+                    Number(
+                        item.open
+                    )
                         ? "rgba(38, 208, 124, 0.45)"
                         : "rgba(255, 95, 109, 0.45)"
             })
         );
 
-
     candleSeries.setData(
         candleData
     );
-
 
     volumeSeries.setData(
         volumeData
     );
 
-
     currentChartHistory =
         history;
 
+    currentChartStock =
+        stock;
 
     const panes =
-        interactiveChart.panes();
-
+        interactiveChart
+            .panes();
 
     if (
         panes.length > 1
@@ -1482,9 +2354,30 @@ function buildTradingChart(
         panes[1].setHeight(
             130
         );
-
     }
 
+    const markers =
+        buildChartMarkers(
+            stock,
+            history
+        );
+
+    seriesMarkers =
+        LightweightCharts
+            .createSeriesMarkers(
+                candleSeries,
+                markers
+            );
+
+    addCurrentPriceLine(
+        stock
+    );
+
+    interactiveChart
+        .timeScale()
+        .subscribeVisibleLogicalRangeChange(
+            scheduleZoneOverlayUpdate
+        );
 
     interactiveChart
         .subscribeCrosshairMove(
@@ -1500,7 +2393,6 @@ function buildTradingChart(
                             currentChartHistory.length - 1
                         ];
 
-
                     updateOhlcReadout(
                         latest,
                         latest
@@ -1508,133 +2400,134 @@ function buildTradingChart(
                             : null
                     );
 
-
                     return;
-
                 }
 
-
                 const candle =
-                    parameter.seriesData.get(
-                        candleSeries
-                    );
-
+                    parameter
+                        .seriesData
+                        .get(
+                            candleSeries
+                        );
 
                 const volume =
-                    parameter.seriesData.get(
-                        volumeSeries
-                    );
-
+                    parameter
+                        .seriesData
+                        .get(
+                            volumeSeries
+                        );
 
                 if (
                     !candle ||
-                    candle.open === undefined
+                    candle.open ===
+                    undefined
                 ) {
 
                     return;
-
                 }
-
 
                 updateOhlcReadout(
                     candle,
                     volume &&
-                    volume.value !== undefined
+                    volume.value !==
+                    undefined
                         ? volume.value
                         : null
                 );
-
             }
         );
-
 
     const latest =
         history[
             history.length - 1
         ];
 
-
     updateOhlcReadout(
         latest,
         latest.volume
     );
 
-
     setChartRange(
         66
     );
 
+    requestAnimationFrame(
+        () => {
+
+            scheduleZoneOverlayUpdate();
+        }
+    );
 }
 
 
-/* =========================================
-   OPEN CHART MODAL
-   ========================================= */
-
-
 async function openInteractiveChart(
-    symbol,
+    stock,
     chartButton
 ) {
+
+    const symbol =
+        String(
+            stock?.symbol ||
+            ""
+        );
 
     const modal =
         document.getElementById(
             "chart-modal"
         );
 
-
     const modalTitle =
         document.getElementById(
             "chart-modal-title"
         );
-
 
     const modalStatus =
         document.getElementById(
             "chart-modal-status"
         );
 
-
     const loading =
         document.getElementById(
             "chart-loading"
         );
 
+    if (
+        !symbol
+    ) {
+
+        return;
+    }
 
     activeChartButton =
         chartButton;
 
-
     modal.hidden =
         false;
-
 
     document.body.classList.add(
         "chart-modal-open"
     );
 
-
     modalTitle.textContent =
         `${symbol} Interactive Chart`;
-
 
     modalStatus.textContent =
         `Loading ${symbol} daily OHLC price history...`;
 
-
     loading.hidden =
         false;
 
-
     loading.textContent =
         "Loading interactive chart...";
-
 
     updateOhlcReadout(
         null,
         null
     );
 
+    renderStrategyAnalysis(
+        stock
+    );
 
     setActiveRangeButton(
         document.querySelector(
@@ -1642,19 +2535,18 @@ async function openInteractiveChart(
         )
     );
 
-
     document.getElementById(
         "chart-modal-close"
     ).focus();
-
 
     try {
 
         const response =
             await fetch(
-                `${API_URL}?symbol=${encodeURIComponent(symbol)}`
+                `${API_URL}?symbol=${encodeURIComponent(
+                    symbol
+                )}`
             );
-
 
         if (
             !response.ok
@@ -1663,54 +2555,61 @@ async function openInteractiveChart(
             throw new Error(
                 `Chart request failed: ${response.status}`
             );
-
         }
-
 
         const payload =
             await response.json();
-
 
         if (
             !Array.isArray(
                 payload.history
             ) ||
-            payload.history.length === 0
+            payload.history.length ===
+            0
         ) {
 
             throw new Error(
                 `No historical data returned for ${symbol}.`
             );
-
         }
-
 
         const history =
             payload.history
                 .map(
                     item => ({
                         time:
-                            String(item.time),
+                            String(
+                                item.time
+                            ),
 
                         open:
-                            Number(item.open),
+                            Number(
+                                item.open
+                            ),
 
                         high:
-                            Number(item.high),
+                            Number(
+                                item.high
+                            ),
 
                         low:
-                            Number(item.low),
+                            Number(
+                                item.low
+                            ),
 
                         close:
-                            Number(item.close),
+                            Number(
+                                item.close
+                            ),
 
                         volume:
-                            Number(item.volume) || 0
+                            Number(
+                                item.volume
+                            ) || 0
                     })
                 )
                 .filter(
                     item =>
-
                         item.time &&
 
                         Number.isFinite(
@@ -1728,44 +2627,53 @@ async function openInteractiveChart(
                         Number.isFinite(
                             item.close
                         )
-
                 )
                 .sort(
                     (
                         first,
                         second
                     ) =>
-                        first.time.localeCompare(
-                            second.time
-                        )
+                        first.time
+                            .localeCompare(
+                                second.time
+                            )
                 );
 
-
         if (
-            history.length === 0
+            !history.length
         ) {
 
             throw new Error(
                 `No usable OHLC data returned for ${symbol}.`
             );
-
         }
-
 
         buildTradingChart(
             symbol,
-            history
+            history,
+            stock
         );
 
+        const supportCount =
+            getZones(
+                stock,
+                "support"
+            ).length;
+
+        const resistanceCount =
+            getZones(
+                stock,
+                "resistance"
+            ).length;
 
         modalStatus.textContent =
             `${history.length} trading days loaded for ${symbol}. ` +
+            `${supportCount} support zone(s), ` +
+            `${resistanceCount} resistance zone(s). ` +
             `Move the crosshair across any candle to inspect that day's prices.`;
-
 
         loading.hidden =
             true;
-
     }
 
     catch (error) {
@@ -1775,29 +2683,19 @@ async function openInteractiveChart(
             error
         );
 
-
         destroyInteractiveChart();
-
 
         modalStatus.textContent =
             `Unable to load ${symbol} interactive chart.`;
 
-
         loading.hidden =
             false;
 
-
         loading.textContent =
-            "Interactive chart could not be loaded. Close the window and try again.";
-
+            "Interactive chart could not be loaded. " +
+            "Close the window and try again.";
     }
-
 }
-
-
-/* =========================================
-   CLOSE CHART
-   ========================================= */
 
 
 function closeInteractiveChart() {
@@ -1807,43 +2705,34 @@ function closeInteractiveChart() {
             "chart-modal"
         );
 
-
     modal.hidden =
         true;
-
 
     document.body.classList.remove(
         "chart-modal-open"
     );
 
-
     destroyInteractiveChart();
-
 
     updateOhlcReadout(
         null,
         null
     );
 
+    renderStrategyAnalysis(
+        null
+    );
 
     if (
         activeChartButton
     ) {
 
         activeChartButton.focus();
-
     }
-
 
     activeChartButton =
         null;
-
 }
-
-
-/* =========================================
-   RANGE BUTTON EVENTS
-   ========================================= */
 
 
 document
@@ -1861,21 +2750,13 @@ document
                         button
                     );
 
-
                     setChartRange(
                         button.dataset.range
                     );
-
                 }
             );
-
         }
     );
-
-
-/* =========================================
-   CLOSE BUTTON
-   ========================================= */
 
 
 document
@@ -1886,11 +2767,6 @@ document
         "click",
         closeInteractiveChart
     );
-
-
-/* =========================================
-   CLICK OUTSIDE MODAL
-   ========================================= */
 
 
 document
@@ -1907,16 +2783,9 @@ document
             ) {
 
                 closeInteractiveChart();
-
             }
-
         }
     );
-
-
-/* =========================================
-   ESCAPE KEY
-   ========================================= */
 
 
 document.addEventListener(
@@ -1924,7 +2793,9 @@ document.addEventListener(
     event => {
 
         if (
-            event.key === "Escape" &&
+            event.key ===
+            "Escape" &&
+
             !document
                 .getElementById(
                     "chart-modal"
@@ -1933,16 +2804,51 @@ document.addEventListener(
         ) {
 
             closeInteractiveChart();
-
         }
-
     }
 );
 
 
-/* =========================================
-   START DASHBOARD
-   ========================================= */
+const chartShell =
+    document.querySelector(
+        ".interactive-chart-shell"
+    );
+
+
+chartShell.addEventListener(
+    "wheel",
+    scheduleZoneOverlayUpdate,
+    {
+        passive:
+            true
+    }
+);
+
+
+chartShell.addEventListener(
+    "pointermove",
+    event => {
+
+        if (
+            event.buttons
+        ) {
+
+            scheduleZoneOverlayUpdate();
+        }
+    }
+);
+
+
+chartShell.addEventListener(
+    "pointerup",
+    scheduleZoneOverlayUpdate
+);
+
+
+window.addEventListener(
+    "resize",
+    scheduleZoneOverlayUpdate
+);
 
 
 loadStockResults();

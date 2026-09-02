@@ -1482,3 +1482,536 @@ td:nth-child(5) img {
     }
 
 }
+
+
+/* =========================================
+   STRATEGY DECISION + CHART OVERLAYS
+   ========================================= */
+
+.recommendation-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 58px;
+
+    padding: 6px 10px;
+
+    border: 1px solid currentColor;
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+}
+
+.rec-buy {
+    color: #26d07c;
+
+    background:
+        rgba(
+            38,
+            208,
+            124,
+            0.10
+        );
+}
+
+.rec-sell {
+    color: #ff5f6d;
+
+    background:
+        rgba(
+            255,
+            95,
+            109,
+            0.10
+        );
+}
+
+.rec-hold {
+    color: #ffd75a;
+
+    background:
+        rgba(
+            255,
+            215,
+            90,
+            0.10
+        );
+}
+
+.strategy-analysis[hidden] {
+    display: none;
+}
+
+.strategy-analysis {
+    margin-bottom: 12px;
+    padding: 12px;
+
+    border: 1px solid #28313a;
+    border-radius: 12px;
+
+    background: #0f151b;
+}
+
+.strategy-summary-row {
+    display: grid;
+
+    grid-template-columns:
+        1.15fr
+        repeat(
+            4,
+            1fr
+        );
+
+    gap: 8px;
+}
+
+.strategy-decision,
+.strategy-stat {
+    min-width: 0;
+
+    padding: 10px 12px;
+
+    border: 1px solid #29333c;
+    border-radius: 9px;
+
+    background: #111820;
+}
+
+.strategy-decision span,
+.strategy-stat span,
+.strategy-zone-card > span {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #7f8a94;
+
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+}
+
+.strategy-decision strong,
+.strategy-stat strong {
+    display: block;
+
+    overflow: hidden;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size: 15px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.strategy-decision.rec-buy {
+    border-color:
+        rgba(
+            38,
+            208,
+            124,
+            0.45
+        );
+
+    box-shadow:
+        inset
+        4px
+        0
+        0
+        #26d07c;
+}
+
+.strategy-decision.rec-sell {
+    border-color:
+        rgba(
+            255,
+            95,
+            109,
+            0.45
+        );
+
+    box-shadow:
+        inset
+        4px
+        0
+        0
+        #ff5f6d;
+}
+
+.strategy-decision.rec-hold {
+    border-color:
+        rgba(
+            255,
+            215,
+            90,
+            0.45
+        );
+
+    box-shadow:
+        inset
+        4px
+        0
+        0
+        #ffd75a;
+}
+
+.strategy-zone-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 8px;
+
+    margin-top: 8px;
+}
+
+.strategy-zone-card {
+    padding: 10px 12px;
+
+    border-radius: 9px;
+}
+
+.strategy-zone-card strong,
+.strategy-zone-card small {
+    display: block;
+}
+
+.strategy-zone-card strong {
+    margin-bottom: 4px;
+
+    color: #f1f4f6;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size: 13px;
+}
+
+.strategy-zone-card small {
+    color: #9aa5af;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.support-card {
+    border:
+        1px solid
+        rgba(
+            38,
+            208,
+            124,
+            0.38
+        );
+
+    background:
+        rgba(
+            38,
+            208,
+            124,
+            0.08
+        );
+}
+
+.resistance-card {
+    border:
+        1px solid
+        rgba(
+            255,
+            95,
+            109,
+            0.38
+        );
+
+    background:
+        rgba(
+            255,
+            95,
+            109,
+            0.08
+        );
+}
+
+.strategy-legend {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    margin-top: 8px;
+}
+
+.strategy-legend span {
+    padding: 5px 8px;
+
+    border:
+        1px solid
+        currentColor;
+
+    border-radius: 999px;
+
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.55px;
+}
+
+.legend-buy {
+    color: #26d07c;
+
+    background:
+        rgba(
+            38,
+            208,
+            124,
+            0.08
+        );
+}
+
+.legend-sell {
+    color: #ff5f6d;
+
+    background:
+        rgba(
+            255,
+            95,
+            109,
+            0.08
+        );
+}
+
+.legend-hold {
+    color: #ffd75a;
+
+    background:
+        rgba(
+            255,
+            215,
+            90,
+            0.08
+        );
+}
+
+.strategy-reason-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 8px;
+
+    margin-top: 8px;
+}
+
+.strategy-reason-card {
+    padding: 10px 12px;
+
+    border: 1px solid #28313a;
+    border-radius: 9px;
+
+    background: #10161c;
+}
+
+.strategy-reason-card h3 {
+    margin: 0 0 7px;
+
+    color: #cbd3da;
+
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.strategy-reason-card ul {
+    margin: 0;
+
+    padding-left: 18px;
+}
+
+.strategy-reason-card li,
+.strategy-reason-card p {
+    margin: 0 0 4px;
+
+    color: #929da7;
+
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.strategy-reason-card li:last-child {
+    margin-bottom: 0;
+}
+
+.reasoning-card {
+    border-left:
+        3px solid
+        #26d07c;
+}
+
+.why-not-card {
+    border-left:
+        3px solid
+        #ffd75a;
+}
+
+.interactive-chart {
+    position: relative;
+
+    z-index: 1;
+}
+
+.chart-zone-overlay {
+    position: absolute;
+
+    top: 0;
+    right: 70px;
+    bottom: 132px;
+    left: 0;
+
+    z-index: 4;
+
+    overflow: hidden;
+
+    pointer-events: none;
+}
+
+.chart-zone-band {
+    position: absolute;
+
+    right: 0;
+    left: 0;
+
+    min-height: 6px;
+
+    border-top:
+        1px solid
+        currentColor;
+
+    border-bottom:
+        1px solid
+        currentColor;
+}
+
+.chart-zone-band span {
+    position: absolute;
+
+    top: 2px;
+    left: 8px;
+
+    max-width:
+        calc(
+            100% - 16px
+        );
+
+    overflow: hidden;
+
+    padding: 2px 6px;
+
+    border-radius: 4px;
+
+    background:
+        rgba(
+            7,
+            11,
+            15,
+            0.80
+        );
+
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.45px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chart-zone-support {
+    color: #26d07c;
+
+    background:
+        rgba(
+            38,
+            208,
+            124,
+            0.14
+        );
+}
+
+.chart-zone-resistance {
+    color: #ff5f6d;
+
+    background:
+        rgba(
+            255,
+            95,
+            109,
+            0.14
+        );
+}
+
+
+@media (max-width: 900px) {
+
+    .strategy-summary-row {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+    .strategy-zone-grid,
+    .strategy-reason-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+}
+
+
+@media (max-width: 560px) {
+
+    .strategy-summary-row {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(
+                    0,
+                    1fr
+                )
+            );
+    }
+
+    .chart-zone-overlay {
+        right: 58px;
+    }
+
+    .chart-zone-band span {
+        max-width: 75%;
+    }
+
+}
