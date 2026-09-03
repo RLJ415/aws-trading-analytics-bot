@@ -15,6 +15,177 @@
         rel="stylesheet"
         href="style.css"
     >
+
+    <style>
+/* =========================================
+   SIGNAL FILTER TABS
+   ========================================= */
+
+.signal-tabs {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 10px;
+
+    margin-bottom: 16px;
+}
+
+.signal-tab {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding: 12px 14px;
+
+    border: 1px solid #35404a;
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #1a2027 0%,
+            #11171d 100%
+        );
+
+    color: #9aa5af;
+
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+
+    cursor: pointer;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 7px 18px rgba(0, 0, 0, 0.18);
+}
+
+.signal-tab strong {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-width: 30px;
+    height: 24px;
+
+    padding: 0 7px;
+
+    border: 1px solid currentColor;
+    border-radius: 999px;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size: 11px;
+}
+
+.signal-tab:hover {
+    transform:
+        translateY(
+            -1px
+        );
+}
+
+.signal-tab-buy {
+    color: #26d07c;
+}
+
+.signal-tab-buy.active {
+    border-color: #26d07c;
+
+    background:
+        rgba(
+            38,
+            208,
+            124,
+            0.12
+        );
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 18px rgba(38, 208, 124, 0.14);
+}
+
+.signal-tab-hold {
+    color: #ffd75a;
+}
+
+.signal-tab-hold.active {
+    border-color: #ffd75a;
+
+    background:
+        rgba(
+            255,
+            215,
+            90,
+            0.11
+        );
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 18px rgba(255, 215, 90, 0.12);
+}
+
+.signal-tab-sell {
+    color: #ff5f6d;
+}
+
+.signal-tab-sell.active {
+    border-color: #ff5f6d;
+
+    background:
+        rgba(
+            255,
+            95,
+            109,
+            0.12
+        );
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 18px rgba(255, 95, 109, 0.12);
+}
+
+.signal-tab:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+
+    .signal-tabs {
+        gap: 6px;
+    }
+
+    .signal-tab {
+        gap: 6px;
+        padding: 10px 8px;
+        font-size: 10px;
+    }
+
+    .signal-tab strong {
+        min-width: 25px;
+        height: 22px;
+        padding: 0 5px;
+        font-size: 10px;
+    }
+
+}
+    </style>
+
 </head>
 
 <body>
@@ -116,6 +287,47 @@
         <h2>
             Stock Analysis
         </h2>
+
+        <div
+            class="signal-tabs"
+            role="tablist"
+            aria-label="Stock recommendation filters"
+        >
+
+            <button
+                type="button"
+                class="signal-tab signal-tab-buy active"
+                data-filter="BUY"
+                role="tab"
+                aria-selected="true"
+            >
+                <span>BUY</span>
+                <strong id="buy-tab-count">0</strong>
+            </button>
+
+            <button
+                type="button"
+                class="signal-tab signal-tab-hold"
+                data-filter="HOLD"
+                role="tab"
+                aria-selected="false"
+            >
+                <span>HOLD</span>
+                <strong id="hold-tab-count">0</strong>
+            </button>
+
+            <button
+                type="button"
+                class="signal-tab signal-tab-sell"
+                data-filter="SELL"
+                role="tab"
+                aria-selected="false"
+            >
+                <span>SELL</span>
+                <strong id="sell-tab-count">0</strong>
+            </button>
+
+        </div>
 
         <div class="table-wrap">
 
@@ -397,6 +609,7 @@ const STOCKS_PER_PAGE = 20;
 
 let stockResults = [];
 let currentPage = 1;
+let activeRecommendationFilter = "BUY";
 let activeChartButton = null;
 let interactiveChart = null;
 let candleSeries = null;
@@ -1016,6 +1229,97 @@ function renderStrategyAnalysis(
 }
 
 
+function getFilteredStockResults() {
+
+    return stockResults.filter(
+        stock =>
+            String(
+                stock.recommendation ||
+                "HOLD"
+            ).toUpperCase() ===
+            activeRecommendationFilter
+    );
+}
+
+
+function updateSignalTabCounts() {
+
+    const counts = {
+        BUY: 0,
+        HOLD: 0,
+        SELL: 0
+    };
+
+    stockResults.forEach(
+        stock => {
+
+            const recommendation =
+                String(
+                    stock.recommendation ||
+                    "HOLD"
+                ).toUpperCase();
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    counts,
+                    recommendation
+                )
+            ) {
+                counts[recommendation] += 1;
+            }
+        }
+    );
+
+    document.getElementById(
+        "buy-tab-count"
+    ).textContent = counts.BUY;
+
+    document.getElementById(
+        "hold-tab-count"
+    ).textContent = counts.HOLD;
+
+    document.getElementById(
+        "sell-tab-count"
+    ).textContent = counts.SELL;
+}
+
+
+function setActiveRecommendationFilter(
+    recommendation
+) {
+
+    activeRecommendationFilter =
+        recommendation;
+
+    currentPage = 1;
+
+    document
+        .querySelectorAll(
+            ".signal-tab"
+        )
+        .forEach(
+            button => {
+
+                const isActive =
+                    button.dataset.filter ===
+                    activeRecommendationFilter;
+
+                button.classList.toggle(
+                    "active",
+                    isActive
+                );
+
+                button.setAttribute(
+                    "aria-selected",
+                    String(isActive)
+                );
+            }
+        );
+
+    renderCurrentPage();
+}
+
+
 function createPaginationButton(
     label,
     page,
@@ -1083,15 +1387,18 @@ function renderPagination() {
     pagination.innerHTML =
         "";
 
+    const filteredResults =
+        getFilteredStockResults();
+
     if (
-        !stockResults.length
+        !filteredResults.length
     ) {
         return;
     }
 
     const totalPages =
         Math.ceil(
-            stockResults.length /
+            filteredResults.length /
             STOCKS_PER_PAGE
         );
 
@@ -1165,6 +1472,9 @@ function renderCurrentPage() {
             "dashboard-status"
         );
 
+    const filteredResults =
+        getFilteredStockResults();
+
     if (
         !stockResults.length
     ) {
@@ -1188,9 +1498,33 @@ function renderCurrentPage() {
         return;
     }
 
+    if (
+        !filteredResults.length
+    ) {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5">
+                    No ${activeRecommendationFilter} stocks in the latest run.
+                </td>
+            </tr>
+        `;
+
+        dashboardStatus.textContent =
+            `0 ${activeRecommendationFilter} stocks · ` +
+            `${stockResults.length} total processed.`;
+
+        document.getElementById(
+            "pagination"
+        ).innerHTML =
+            "";
+
+        return;
+    }
+
     const totalPages =
         Math.ceil(
-            stockResults.length /
+            filteredResults.length /
             STOCKS_PER_PAGE
         );
 
@@ -1211,11 +1545,11 @@ function renderCurrentPage() {
         Math.min(
             startIndex +
             STOCKS_PER_PAGE,
-            stockResults.length
+            filteredResults.length
         );
 
     const pageResults =
-        stockResults.slice(
+        filteredResults.slice(
             startIndex,
             endIndex
         );
@@ -1333,7 +1667,8 @@ function renderCurrentPage() {
     );
 
     dashboardStatus.textContent =
-        `${stockResults.length} stocks processed in latest run. ` +
+        `${filteredResults.length} ${activeRecommendationFilter} stocks · ` +
+        `${stockResults.length} total processed. ` +
         `Showing ${startIndex + 1}-${endIndex}.`;
 
     renderPagination();
@@ -1398,6 +1733,8 @@ async function loadStockResults() {
                 "Dashboard API returned an unexpected data format."
             );
         }
+
+        updateSignalTabCounts();
 
         currentPage =
             1;
@@ -2849,6 +3186,26 @@ window.addEventListener(
     "resize",
     scheduleZoneOverlayUpdate
 );
+
+
+document
+    .querySelectorAll(
+        ".signal-tab"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    setActiveRecommendationFilter(
+                        button.dataset.filter
+                    );
+                }
+            );
+        }
+    );
 
 
 loadStockResults();
